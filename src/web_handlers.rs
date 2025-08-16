@@ -8,6 +8,7 @@ use crate::dto::ListPageParams;
 use actix_session::Session;
 use actix_web_flash_messages::FlashMessage;
 use crate::init_data;
+use crate::site_data::SiteDataManager;
 use std::error::Error;
 
 #[derive(Serialize)]
@@ -16,77 +17,162 @@ struct CategorizedVideos {
     videos: Vec<Vod>,
 }
 
+// 辅助函数：获取站点数据并添加到模板上下文
+async fn with_site_data<F, R>(
+    db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
+    template_handler: F,
+) -> Result<HttpResponse, Box<dyn std::error::Error>>
+where
+    F: FnOnce(tera::Context, SiteDataManager) -> R,
+    R: std::future::Future<Output = Result<String, Box<dyn std::error::Error>>>,
+{
+    let mut context = tera::Context::new();
+    
+    // 获取导航分类数据
+    let nav_categories = site_data_manager.get_navigation_categories().await;
+    let categories: Vec<Type> = nav_categories.iter().map(|nav| nav.category.clone()).collect();
+    let categories_with_subs: Vec<(Type, Vec<Type>)> = nav_categories.iter()
+        .map(|nav| (nav.category.clone(), nav.sub_categories.clone()))
+        .collect();
+    
+    // 获取所有分类
+    let all_categories = site_data_manager.get_all_categories().await;
+    
+    // 获取配置数据
+    let configs = site_data_manager.get_all_configs().await;
+    
+    // 获取网站名称
+    let sitename = configs.get("site_name")
+        .cloned()
+        .unwrap_or_else(|| "maccms-rust".to_string());
+    
+    // 添加全局数据到上下文
+    context.insert("types", &all_categories);
+    context.insert("categories", &categories);
+    context.insert("categories_with_subs", &categories_with_subs);
+    context.insert("configs", &configs);
+    context.insert("SITENAME", &sitename);
+    
+    // 为方便模板使用，添加一些常用的配置项
+    if let Some(site_url) = configs.get("site_url") {
+        context.insert("SITEURL", site_url);
+    }
+    if let Some(site_keywords) = configs.get("site_keywords") {
+        context.insert("SITEKEYWORDS", site_keywords);
+    }
+    if let Some(site_description) = configs.get("site_description") {
+        context.insert("SITEDESCRIPTION", site_description);
+    }
+    
+    let rendered = template_handler(context, site_data_manager.as_ref().clone()).await?;
+    
+    Ok(HttpResponse::Ok().content_type("text/html").body(rendered))
+}
+
+// 辅助函数：处理模板渲染错误
+fn handle_template_error(e: tera::Error) -> HttpResponse {
+    println!("Template rendering error: {}", e);
+    println!("Error details: {:?}", e);
+    HttpResponse::InternalServerError().body(format!("Template error: {}", e))
+}
+
+// 创建包装函数来处理Actix Web路由的参数传递
+pub fn with_site_data_wrapper<F, R>(handler: F) -> impl Fn(web::Data<Database>, web::Data<SiteDataManager>) -> R
+where
+    F: Fn(web::Data<Database>, web::Data<SiteDataManager>) -> R,
+    R: std::future::Future,
+{
+    handler
+}
+
+// 具体的包装函数
+pub async fn home_page_wrapper(
+    db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
+) -> impl Responder {
+    home_page(db, site_data_manager).await
+}
+
+pub async fn video_detail_handler_wrapper(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
+) -> impl Responder {
+    video_detail_handler(path, db, site_data_manager).await
+}
+
+pub async fn video_player_handler_wrapper(
+    path: web::Path<(String, String)>,
+    db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
+) -> impl Responder {
+    video_player_handler(path, db, site_data_manager).await
+}
+
+pub async fn list_page_handler_wrapper(
+    path: web::Path<i32>,
+    query: web::Query<ListPageParams>,
+    db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
+) -> impl Responder {
+    list_page_handler(path, query, db, site_data_manager).await
+}
+
+pub async fn search_page_handler_wrapper(
+    query: web::Query<crate::dto::ApiParams>,
+    db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
+) -> impl Responder {
+    search_page_handler(query, db, site_data_manager).await
+}
+
 // --- Frontend Web Handlers ---
 
-pub async fn home_page(db: web::Data<Database>) -> impl Responder {
-    let mut context = tera::Context::new();
+pub async fn home_page(
+    db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
+) -> impl Responder {
+    match with_site_data(db.clone(), site_data_manager.clone(), |mut context, site_data| async move {
+        let vod_collection = db.collection::<Vod>("vods");
+        let mut categorized_videos_list = Vec::new();
 
-    // 1. Fetch all categories for navigation
-    let type_collection = db.collection::<Type>("types");
-    let nav_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": 0 }, None).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    
-    // Fetch sub-categories for navigation menu
-    let mut categories_with_subs = Vec::new();
-    for category in &nav_categories {
-        let sub_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": category.type_id }, None).await {
-            Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-            Err(_) => vec![],
-        };
-        categories_with_subs.push((category.clone(), sub_categories));
-    }
-    
-    context.insert("categories", &nav_categories);
-    context.insert("categories_with_subs", &categories_with_subs);
+        // 获取导航分类数据
+        let nav_categories = site_data.get_navigation_categories().await;
 
-    // 2. Fetch videos for each top-level category (include sub-categories)
-    let vod_collection = db.collection::<Vod>("vods");
-    let mut categorized_videos_list = Vec::new();
+        // Fetch videos for each top-level category (include sub-categories)
+        for nav_category in nav_categories {
+            let find_options = FindOptions::builder()
+                .sort(doc! { "vod_pubdate": -1 })
+                .limit(12)
+                .build();
+            
+            // Build filter to include both top-level category and its sub-categories
+            let mut type_ids = vec![nav_category.category.type_id];
+            for sub_cat in &nav_category.sub_categories {
+                type_ids.push(sub_cat.type_id);
+            }
+            
+            let videos = match vod_collection.find(doc! { "type_id": { "$in": type_ids } }, find_options).await {
+                Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
+                Err(_) => vec![],
+            };
 
-    for category in nav_categories.iter() { // Iterate over references
-        let find_options = FindOptions::builder()
-            .sort(doc! { "vod_pubdate": -1 })
-            .limit(12)
-            .build();
-        
-        // Get all sub-category IDs for this top-level category
-        let sub_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": category.type_id }, None).await {
-            Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-            Err(_) => vec![],
-        };
-        
-        // Build filter to include both top-level category and its sub-categories
-        let mut type_ids = vec![category.type_id];
-        for sub_cat in &sub_categories {
-            type_ids.push(sub_cat.type_id);
+            categorized_videos_list.push(CategorizedVideos {
+                category: nav_category.category,
+                videos,
+            });
         }
+
+        context.insert("categorized_videos", &categorized_videos_list);
         
-        let videos = match vod_collection.find(doc! { "type_id": { "$in": type_ids } }, find_options).await {
-            Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-            Err(_) => vec![],
-        };
-
-        categorized_videos_list.push(CategorizedVideos {
-            category: category.clone(), // Clone the category for the struct
-            videos,
-        });
-    }
-
-    context.insert("categorized_videos", &categorized_videos_list);
-    context.insert("SITENAME", "maccms-rust");
-
-    // 3. Render the template
-    match TERA.render("index.html", &context) {
-        Ok(s) => {
-            println!("Debug: Template rendered successfully, length: {}", s.len());
-            HttpResponse::Ok().content_type("text/html").body(s)
-        },
+        TERA.render("index.html", &context)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }).await {
+        Ok(response) => response,
         Err(e) => {
-            println!("Template rendering error: {}", e);
-            println!("Error details: {:?}", e);
-            HttpResponse::InternalServerError().body(format!("Template error: {}", e))
+            println!("Home page error: {}", e);
+            HttpResponse::InternalServerError().body(format!("Error: {}", e))
         }
     }
 }
@@ -95,85 +181,63 @@ pub async fn home_page(db: web::Data<Database>) -> impl Responder {
 pub async fn video_detail_handler(
     path: web::Path<String>,
     db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
 ) -> impl Responder {
     let vod_id = path.into_inner();
-    let mut context = tera::Context::new();
-
-    let vod_collection = db.collection::<Vod>("vods");
-    let type_collection = db.collection::<Type>("types");
-
+    
     // Parse ObjectId from string
     let object_id = match mongodb::bson::oid::ObjectId::parse_str(&vod_id) {
         Ok(id) => id,
         Err(_) => return HttpResponse::NotFound().body("Invalid video ID"),
     };
 
-    // Add navigation data
-    let nav_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": 0 }, None).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    
-    // Fetch sub-categories for navigation menu
-    let mut categories_with_subs = Vec::new();
-    for category in &nav_categories {
-        let sub_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": category.type_id }, None).await {
+    match with_site_data(db.clone(), site_data_manager.clone(), |mut context, site_data| async move {
+        let vod_collection = db.collection::<Vod>("vods");
+
+        // 1. Fetch video details
+        let video = match vod_collection.find_one(doc!{"_id": object_id}, None).await {
+            Ok(Some(v)) => v,
+            _ => return Err("Video not found".into()),
+        };
+        
+        // Convert MongoDB DateTime to timestamp for template
+        let pubdate_timestamp = video.vod_pubdate.timestamp_millis() / 1000;
+        context.insert("vod_pubdate_timestamp", &pubdate_timestamp);
+        context.insert("video", &video);
+
+        // 2. Fetch category info
+        if let Some(category) = site_data.get_category_by_id(video.type_id).await {
+            context.insert("category", &category);
+        }
+
+        // 3. Fetch related videos (same category)
+        let find_options = FindOptions::builder()
+            .sort(doc! { "vod_pubdate": -1 })
+            .limit(10)
+            .build();
+        
+        let related_videos: Vec<Vod> = match vod_collection.find(
+            doc! { "type_id": video.type_id, "_id": { "$ne": object_id } }, 
+            find_options
+        ).await {
             Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
             Err(_) => vec![],
         };
-        categories_with_subs.push((category.clone(), sub_categories));
-    }
-    
-    context.insert("categories", &nav_categories);
-    context.insert("categories_with_subs", &categories_with_subs);
+        
+        // Convert related videos dates to timestamps
+        let related_timestamps: Vec<i64> = related_videos.iter()
+            .map(|v| v.vod_pubdate.timestamp_millis() / 1000)
+            .collect();
+        context.insert("related_videos", &related_videos);
+        context.insert("related_pubdate_timestamps", &related_timestamps);
 
-    // 1. Fetch video details
-    let video = match vod_collection.find_one(doc!{"_id": object_id}, None).await {
-        Ok(Some(v)) => v,
-        _ => return HttpResponse::NotFound().body("Video not found"),
-    };
-    
-    // Convert MongoDB DateTime to timestamp for template
-    let pubdate_timestamp = video.vod_pubdate.timestamp_millis() / 1000;
-    context.insert("vod_pubdate_timestamp", &pubdate_timestamp);
-    context.insert("video", &video);
-
-    // 2. Fetch category info
-    if let Ok(Some(category)) = type_collection.find_one(doc!{"type_id": video.type_id}, None).await {
-        context.insert("category", &category);
-    }
-
-    // 3. Fetch related videos (same category)
-    let find_options = FindOptions::builder()
-        .sort(doc! { "vod_pubdate": -1 })
-        .limit(10)
-        .build();
-    
-    let related_videos: Vec<Vod> = match vod_collection.find(
-        doc! { "type_id": video.type_id, "_id": { "$ne": object_id } }, 
-        find_options
-    ).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    
-    // Convert related videos dates to timestamps
-    let related_timestamps: Vec<i64> = related_videos.iter()
-        .map(|v| v.vod_pubdate.timestamp_millis() / 1000)
-        .collect();
-    context.insert("related_videos", &related_videos);
-    context.insert("related_pubdate_timestamps", &related_timestamps);
-
-    context.insert("SITENAME", "maccms-rust");
-
-    // 4. Render the template
-    match TERA.render("detail.html", &context) {
-        Ok(s) => HttpResponse::Ok().content_type("text/html").body(s),
+        TERA.render("detail.html", &context)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }).await {
+        Ok(response) => response,
         Err(e) => {
-            println!("Template rendering error: {}", e);
-            println!("Error kind: {:?}", e.kind);
-            println!("Error source: {:?}", e.source());
-            HttpResponse::InternalServerError().body(format!("Template error: {}", e))
+            println!("Video detail error: {}", e);
+            HttpResponse::InternalServerError().body(format!("Error: {}", e))
         }
     }
 }
@@ -182,37 +246,15 @@ pub async fn video_detail_handler(
 pub async fn video_player_handler(
     path: web::Path<(String, String)>,
     db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
 ) -> impl Responder {
     let (vod_id, play_index) = path.into_inner();
-    let mut context = tera::Context::new();
-
-    let vod_collection = db.collection::<Vod>("vods");
-    let type_collection = db.collection::<Type>("types");
-
+    
     // Parse ObjectId from string
     let object_id = match mongodb::bson::oid::ObjectId::parse_str(&vod_id) {
         Ok(id) => id,
         Err(_) => return HttpResponse::NotFound().body("Invalid video ID"),
     };
-
-    // Add navigation data
-    let nav_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": 0 }, None).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    
-    // Fetch sub-categories for navigation menu
-    let mut categories_with_subs = Vec::new();
-    for category in &nav_categories {
-        let sub_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": category.type_id }, None).await {
-            Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-            Err(_) => vec![],
-        };
-        categories_with_subs.push((category.clone(), sub_categories));
-    }
-    
-    context.insert("categories", &nav_categories);
-    context.insert("categories_with_subs", &categories_with_subs);
 
     // Parse play index (format: "source-index" or "index")
     let play_idx: usize = if play_index.contains('-') {
@@ -232,65 +274,62 @@ pub async fn video_player_handler(
         }
     };
 
-    // 1. Fetch video details and increment hit count
-    let video = match vod_collection.find_one(doc!{"_id": object_id}, None).await {
-        Ok(Some(v)) => v,
-        _ => return HttpResponse::NotFound().body("Video not found"),
-    };
-    
-    // Increment hit count
-    let current_hits = video.vod_hits.unwrap_or(0);
-    let current_hits_day = video.vod_hits_day.unwrap_or(0);
-    let current_hits_week = video.vod_hits_week.unwrap_or(0);
-    let current_hits_month = video.vod_hits_month.unwrap_or(0);
-    
-    let update_result = vod_collection.update_one(
-        doc! {"_id": object_id},
-        doc! {"$set": {
-            "vod_hits": current_hits + 1,
-            "vod_hits_day": current_hits_day + 1,
-            "vod_hits_week": current_hits_week + 1,
-            "vod_hits_month": current_hits_month + 1,
-        }},
-        None
-    ).await;
-    
-    if let Err(e) = update_result {
-        println!("Warning: Failed to update hit count: {}", e);
-    }
-    
-    // Convert MongoDB DateTime to timestamp for template
-    let pubdate_timestamp = video.vod_pubdate.timestamp_millis() / 1000;
-    context.insert("vod_pubdate_timestamp", &pubdate_timestamp);
-    context.insert("video", &video);
+    match with_site_data(db.clone(), site_data_manager.clone(), |mut context, site_data| async move {
+        let vod_collection = db.collection::<Vod>("vods");
 
-    // 2. Get play URL
-    let play_url = if let Some(source) = video.vod_play_urls.get(0) {
-        if let Some(url_info) = source.urls.get(play_idx) {
-            url_info.url.clone()
-        } else {
-            return HttpResponse::NotFound().body("Play URL not found");
+        // 1. Fetch video details and increment hit count
+        let video = match vod_collection.find_one(doc!{"_id": object_id}, None).await {
+            Ok(Some(v)) => v,
+            _ => return Err("Video not found".into()),
+        };
+        
+        // Increment hit count
+        let current_hits = video.vod_hits.unwrap_or(0);
+        let current_hits_day = video.vod_hits_day.unwrap_or(0);
+        let current_hits_week = video.vod_hits_week.unwrap_or(0);
+        let current_hits_month = video.vod_hits_month.unwrap_or(0);
+        
+        let update_result = vod_collection.update_one(
+            doc! {"_id": object_id},
+            doc! {"$set": {
+                "vod_hits": current_hits + 1,
+                "vod_hits_day": current_hits_day + 1,
+                "vod_hits_week": current_hits_week + 1,
+                "vod_hits_month": current_hits_month + 1,
+            }},
+            None
+        ).await;
+        
+        if let Err(e) = update_result {
+            println!("Warning: Failed to update hit count: {}", e);
         }
-    } else {
-        return HttpResponse::NotFound().body("No play sources available");
-    };
+        
+        // Convert MongoDB DateTime to timestamp for template
+        let pubdate_timestamp = video.vod_pubdate.timestamp_millis() / 1000;
+        context.insert("vod_pubdate_timestamp", &pubdate_timestamp);
+        context.insert("video", &video);
 
-    context.insert("play_url", &play_url);
-    context.insert("play_index", &play_idx);
-    context.insert("SITENAME", "maccms-rust");
+        // 2. Get play URL
+        let play_url = if let Some(source) = video.vod_play_urls.get(0) {
+            if let Some(url_info) = source.urls.get(play_idx) {
+                url_info.url.clone()
+            } else {
+                return Err("Play URL not found".into());
+            }
+        } else {
+            return Err("No play sources available".into());
+        };
 
-    // 3. Render the template
-    match TERA.render("player.html", &context) {
-        Ok(s) => HttpResponse::Ok().content_type("text/html").body(s),
+        context.insert("play_url", &play_url);
+        context.insert("play_index", &play_idx);
+
+        TERA.render("player.html", &context)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }).await {
+        Ok(response) => response,
         Err(e) => {
-            println!("Template rendering error: {}", e);
-            println!("Error kind: {:?}", e.kind);
-            println!("Error source: {:?}", e.source());
-            
-            // Print more details about the context
-            println!("Context contains keys (but we can't iterate over them directly)");
-            
-            HttpResponse::InternalServerError().body(format!("Template error: {} - Kind: {:?}", e, e.kind))
+            println!("Video player error: {}", e);
+            HttpResponse::InternalServerError().body(format!("Error: {}", e))
         }
     }
 }
@@ -307,161 +346,151 @@ pub async fn list_page_handler(
     path: web::Path<i32>,
     query: web::Query<ListPageParams>,
     db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
 ) -> impl Responder {
     let type_id = path.into_inner();
-    let mut context = tera::Context::new();
 
-    // Add navigation data
-    let type_collection = db.collection::<Type>("types");
-    let nav_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": 0 }, None).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    
-    // Fetch sub-categories for navigation menu
-    let mut categories_with_subs = Vec::new();
-    for category in &nav_categories {
-        let sub_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": category.type_id }, None).await {
+    match with_site_data(db.clone(), site_data_manager.clone(), |mut context, site_data| async move {
+        // Get main category info
+        let main_category = match site_data.get_category_by_id(type_id).await {
+            Some(cat) => cat,
+            None => return Err("Category not found".into()),
+        };
+        context.insert("category", &main_category);
+
+        // Parse subarea and subyear for filtering options
+        let subarea_options: Vec<String> = if let Some(subarea) = &main_category.subarea {
+            subarea.split(',').map(|s| s.trim().to_string()).collect()
+        } else {
+            vec![]
+        };
+        let subyear_options: Vec<String> = if let Some(subyear) = &main_category.subyear {
+            subyear.split(',').map(|s| s.trim().to_string()).collect()
+        } else {
+            vec![]
+        };
+        context.insert("subarea_options", &subarea_options);
+        context.insert("subyear_options", &subyear_options);
+
+        // Get sub-categories for filter
+        let all_categories = site_data.get_all_categories().await;
+        let sub_categories: Vec<Type> = all_categories
+            .iter()
+            .filter(|cat| cat.type_pid == type_id)
+            .cloned()
+            .collect();
+        context.insert("sub_categories", &sub_categories);
+
+        // Initialize filter variables for template
+        context.insert("current_sub_type", &None::<i32>);
+        context.insert("current_area", &None::<String>);
+        context.insert("current_year", &None::<String>);
+        context.insert("current_sort", &query.sort);
+
+        let vod_collection = db.collection::<Vod>("vods");
+
+        // Build filter for videos
+        let mut filter = doc! {};
+        
+        // Handle sub_type filtering - if sub_type is provided, use it instead of main type_id
+        let mut display_category = main_category.clone();
+        if let Some(sub_type) = query.sub_type {
+            context.insert("current_sub_type", &sub_type);
+            filter.insert("type_id", sub_type);
+            
+            // Fetch subcategory info for SEO and display
+            if let Some(sub_cat) = site_data.get_category_by_id(sub_type).await {
+                display_category = sub_cat;
+                context.insert("subcategory", &display_category);
+            }
+        } else {
+            // If no sub_type is selected, include main category and all its sub-categories
+            let mut type_ids = vec![type_id];
+            for sub_cat in &sub_categories {
+                type_ids.push(sub_cat.type_id);
+            }
+            filter.insert("type_id", doc! { "$in": type_ids });
+        }
+        
+        // Always insert the display category (either main category or subcategory)
+        context.insert("display_category", &display_category);
+
+        if let Some(area) = &query.area {
+            filter.insert("vod_area", area);
+            context.insert("current_area", area);
+        }
+        if let Some(year) = &query.year {
+            filter.insert("vod_year", year);
+            context.insert("current_year", year);
+        }
+
+        // Pagination setup
+        let page = query.pg.unwrap_or(1);
+        let limit = 20; // Items per page
+        let skip = if page > 0 { (page - 1) * limit } else { 0 };
+
+        // Count total documents for pagination
+        let total_items = match vod_collection.count_documents(filter.clone(), None).await {
+            Ok(count) => count,
+            Err(_) => 0,
+        };
+        
+        let total_pages = if total_items > 0 {
+            (total_items as f64 / limit as f64).ceil() as u64
+        } else {
+            0
+        };
+
+        // Build sort options based on query parameter
+        let sort_doc = match query.sort.as_deref() {
+            Some("hits") => doc! { "vod_hits": -1 }, // Most played
+            Some("score") => doc! { "vod_score": -1 }, // Highest rated
+            Some("year_desc") => doc! { "vod_year": -1 }, // Newest year
+            Some("year_asc") => doc! { "vod_year": 1 }, // Oldest year
+            Some("name_asc") => doc! { "vod_name": 1 }, // Name A-Z
+            Some("name_desc") => doc! { "vod_name": -1 }, // Name Z-A
+            _ => doc! { "vod_pubdate": -1 }, // Default: latest published
+        };
+
+        // Fetch videos based on filter with pagination
+        let find_options = FindOptions::builder()
+            .skip(Some(skip as u64))
+            .limit(Some(limit as i64))
+            .sort(sort_doc)
+            .build();
+
+        let vods: Vec<Vod> = match vod_collection.find(filter, find_options).await {
             Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
             Err(_) => vec![],
         };
-        categories_with_subs.push((category.clone(), sub_categories));
-    }
-    
-    context.insert("categories", &nav_categories);
-    context.insert("categories_with_subs", &categories_with_subs);
+        context.insert("vods", &vods);
 
-    // Initialize filter variables for template
-    context.insert("current_sub_type", &None::<i32>);
-    context.insert("current_area", &None::<String>);
-    context.insert("current_year", &None::<String>);
-    context.insert("current_sort", &query.sort);
+        // Add pagination info to context
+        if total_pages > 1 {
+            let mut pages = Vec::new();
+            let start_page = if page > 3 { page - 3 } else { 1 };
+            let end_page = if page + 3 < total_pages { page + 3 } else { total_pages };
+            
+            for p in start_page..=end_page {
+                pages.push(p);
+            }
 
-    let vod_collection = db.collection::<Vod>("vods");
-
-    // 1. Fetch main category info
-    let main_category = match type_collection.find_one(doc!{"type_id": type_id}, None).await {
-        Ok(Some(cat)) => cat,
-        _ => return HttpResponse::NotFound().body("Category not found"),
-    };
-    context.insert("category", &main_category);
-
-    // 2. Parse subarea and subyear for filtering options
-    let subarea_options: Vec<String> = if let Some(subarea) = &main_category.subarea {
-        subarea.split(',').map(|s| s.trim().to_string()).collect()
-    } else {
-        vec![]
-    };
-    let subyear_options: Vec<String> = if let Some(subyear) = &main_category.subyear {
-        subyear.split(',').map(|s| s.trim().to_string()).collect()
-    } else {
-        vec![]
-    };
-    context.insert("subarea_options", &subarea_options);
-    context.insert("subyear_options", &subyear_options);
-
-    // 3. Fetch sub-categories for filter
-    let sub_categories: Vec<Type> = match type_collection.find(doc!{"type_pid": type_id}, None).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    context.insert("sub_categories", &sub_categories);
-
-    // 4. Build filter for videos
-    let mut filter = doc! {};
-    
-    // Handle sub_type filtering - if sub_type is provided, use it instead of main type_id
-    if let Some(sub_type) = query.sub_type {
-        context.insert("current_sub_type", &sub_type);
-        filter.insert("type_id", sub_type);
-    } else {
-        // If no sub_type is selected, include main category and all its sub-categories
-        let mut type_ids = vec![type_id];
-        for sub_cat in &sub_categories {
-            type_ids.push(sub_cat.type_id);
-        }
-        filter.insert("type_id", doc! { "$in": type_ids });
-    }
-
-    if let Some(area) = &query.area {
-        filter.insert("vod_area", area);
-        context.insert("current_area", area);
-    }
-    if let Some(year) = &query.year {
-        filter.insert("vod_year", year);
-        context.insert("current_year", year);
-    }
-
-    // 5. Pagination setup
-    let page = query.pg.unwrap_or(1);
-    let limit = 20; // Items per page
-    let skip = if page > 0 { (page - 1) * limit } else { 0 };
-
-    // 6. Count total documents for pagination
-    let total_items = match vod_collection.count_documents(filter.clone(), None).await {
-        Ok(count) => count,
-        Err(_) => 0,
-    };
-    
-    let total_pages = if total_items > 0 {
-        (total_items as f64 / limit as f64).ceil() as u64
-    } else {
-        0
-    };
-
-    // 7. Build sort options based on query parameter
-    let sort_doc = match query.sort.as_deref() {
-        Some("hits") => doc! { "vod_hits": -1 }, // Most played
-        Some("score") => doc! { "vod_score": -1 }, // Highest rated
-        Some("year_desc") => doc! { "vod_year": -1 }, // Newest year
-        Some("year_asc") => doc! { "vod_year": 1 }, // Oldest year
-        Some("name_asc") => doc! { "vod_name": 1 }, // Name A-Z
-        Some("name_desc") => doc! { "vod_name": -1 }, // Name Z-A
-        _ => doc! { "vod_pubdate": -1 }, // Default: latest published
-    };
-
-    // 8. Fetch videos based on filter with pagination
-    let find_options = FindOptions::builder()
-        .skip(Some(skip as u64))
-        .limit(Some(limit as i64))
-        .sort(sort_doc)
-        .build();
-
-    let vods: Vec<Vod> = match vod_collection.find(filter, find_options).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    context.insert("vods", &vods);
-
-    // 9. Add pagination info to context
-    if total_pages > 1 {
-        let mut pages = Vec::new();
-        let start_page = if page > 3 { page - 3 } else { 1 };
-        let end_page = if page + 3 < total_pages { page + 3 } else { total_pages };
-        
-        for p in start_page..=end_page {
-            pages.push(p);
+            let pagination = PaginationInfo {
+                current_page: page,
+                total_pages,
+                total_items,
+                pages,
+            };
+            context.insert("pagination", &pagination);
         }
 
-        let pagination = PaginationInfo {
-            current_page: page,
-            total_pages,
-            total_items,
-            pages,
-        };
-        context.insert("pagination", &pagination);
-    }
-
-    // 10. Add common variables
-    context.insert("SITENAME", "maccms-rust");
-
-    // 11. Render the template
-    match TERA.render("list.html", &context) {
-        Ok(s) => HttpResponse::Ok().content_type("text/html").body(s),
+        TERA.render("list.html", &context)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }).await {
+        Ok(response) => response,
         Err(e) => {
-            println!("Template rendering error: {}", e);
-            println!("Error details: {:?}", e);
-            HttpResponse::InternalServerError().body(format!("Template error: {}", e))
+            println!("List page error: {}", e);
+            HttpResponse::InternalServerError().body(format!("Error: {}", e))
         }
     }
 }
@@ -470,62 +499,42 @@ pub async fn list_page_handler(
 pub async fn search_page_handler(
     query: web::Query<crate::dto::ApiParams>,
     db: web::Data<Database>,
+    site_data_manager: web::Data<SiteDataManager>,
 ) -> impl Responder {
-    let mut context = tera::Context::new();
-
-    // Add navigation data
-    let type_collection = db.collection::<Type>("types");
-    let nav_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": 0 }, None).await {
-        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-        Err(_) => vec![],
-    };
-    
-    // Fetch sub-categories for navigation menu
-    let mut categories_with_subs = Vec::new();
-    for category in &nav_categories {
-        let sub_categories: Vec<Type> = match type_collection.find(doc! { "type_pid": category.type_id }, None).await {
-            Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-            Err(_) => vec![],
+    match with_site_data(db.clone(), site_data_manager.clone(), |mut context, _site_data| async move {
+        let vod_collection = db.collection::<Vod>("vods");
+        let search_results = if let Some(ref keyword) = query.wd {
+            let search_filter = doc! {
+                "$or": [
+                    { "vod_name": doc! { "$regex": keyword, "$options": "i" } },
+                    { "vod_actor": doc! { "$regex": keyword, "$options": "i" } },
+                    { "vod_director": doc! { "$regex": keyword, "$options": "i" } }
+                ]
+            };
+            
+            let find_options = FindOptions::builder()
+                .sort(doc! { "vod_pubdate": -1 })
+                .limit(50)
+                .build();
+            
+            match vod_collection.find(search_filter, find_options).await {
+                Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
+                Err(_) => vec![],
+            }
+        } else {
+            vec![]
         };
-        categories_with_subs.push((category.clone(), sub_categories));
-    }
-    
-    context.insert("categories", &nav_categories);
-    context.insert("categories_with_subs", &categories_with_subs);
 
-    let vod_collection = db.collection::<Vod>("vods");
-    let search_results = if let Some(ref keyword) = query.wd {
-        let search_filter = doc! {
-            "$or": [
-                { "vod_name": doc! { "$regex": keyword, "$options": "i" } },
-                { "vod_actor": doc! { "$regex": keyword, "$options": "i" } },
-                { "vod_director": doc! { "$regex": keyword, "$options": "i" } }
-            ]
-        };
-        
-        let find_options = FindOptions::builder()
-            .sort(doc! { "vod_pubdate": -1 })
-            .limit(50)
-            .build();
-        
-        match vod_collection.find(search_filter, find_options).await {
-            Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
-            Err(_) => vec![],
-        }
-    } else {
-        vec![]
-    };
+        context.insert("search_results", &search_results);
+        context.insert("search_keyword", &query.wd);
 
-    context.insert("search_results", &search_results);
-    context.insert("search_keyword", &query.wd);
-    context.insert("SITENAME", "maccms-rust");
-
-    match TERA.render("search.html", &context) {
-        Ok(s) => HttpResponse::Ok().content_type("text/html").body(s),
+        TERA.render("search.html", &context)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }).await {
+        Ok(response) => response,
         Err(e) => {
-            println!("Template rendering error: {}", e);
-            println!("Error details: {:?}", e);
-            HttpResponse::InternalServerError().body(format!("Template error: {}", e))
+            println!("Search page error: {}", e);
+            HttpResponse::InternalServerError().body(format!("Error: {}", e))
         }
     }
 }
@@ -907,6 +916,34 @@ pub async fn admin_indexes_page(session: Session) -> impl Responder {
             eprintln!("[ERROR] Error kind: {:?}", e.kind);
             eprintln!("[ERROR] Full error chain: {:?}", e);
             HttpResponse::InternalServerError().body("Template error")
+        }
+    }
+}
+
+// 刷新缓存处理器
+pub async fn refresh_cache_handler(session: Session, site_data_manager: web::Data<SiteDataManager>) -> impl Responder {
+    // 检查用户是否登录
+    if session.get::<String>("user_id").ok().flatten().is_none() {
+        return HttpResponse::Unauthorized().json(serde_json::json!({
+            "success": false,
+            "message": "未登录或会话已过期"
+        }));
+    }
+
+    match site_data_manager.refresh().await {
+        Ok(_) => {
+            HttpResponse::Ok().json(serde_json::json!({
+                "success": true,
+                "message": "缓存刷新成功",
+                "timestamp": chrono::Utc::now().timestamp()
+            }))
+        }
+        Err(e) => {
+            eprintln!("Cache refresh failed: {}", e);
+            HttpResponse::InternalServerError().json(serde_json::json!({
+                "success": false,
+                "message": format!("缓存刷新失败: {}", e)
+            }))
         }
     }
 }

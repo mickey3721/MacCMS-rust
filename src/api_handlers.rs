@@ -3,7 +3,6 @@ use mongodb::{Database, bson::doc, options::FindOptions};
 use crate::dto::{ApiParams, JsonResponse, VodApiListEntry, Category, VideoFilterParams, CategoryHierarchy};
 use crate::models;
 use futures::{StreamExt, TryStreamExt};
-use serde::{Deserialize, Serialize};
 
 // The main handler for the vod collection API
 pub async fn provide_vod(params: web::Query<ApiParams>, db: web::Data<Database>) -> impl Responder {

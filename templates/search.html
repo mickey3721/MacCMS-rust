@@ -2,9 +2,8 @@
 
 {% block title %}搜索{% if search_keyword %}: {{ search_keyword }}{% endif %} - {{ SITENAME | default(value="maccms-rust")
 }}{% endblock title %}
-{% block description %}搜索结果{% if search_keyword %}: {{ search_keyword }}{% endif %} - {{ SITENAME |
-default(value="maccms-rust") }}{% endblock description %}
-{% block keywords %}搜索,视频搜索,电影搜索,电视剧搜索{% if search_keyword %},{{ search_keyword }}{% endif %}{% endblock keywords %}
+{% block description %}搜索结果{% if search_keyword %}: {{ search_keyword }}{% endif %} - {{ SITEDESCRIPTION | default(value="搜索您感兴趣的精彩视频内容") }}{% endblock description %}
+{% block keywords %}搜索,视频搜索,电影搜索,电视剧搜索{% if search_keyword %},{{ search_keyword }}{% endif %},{{ SITEKEYWORDS | default(value="") }}{% endblock keywords %}
 
 {% block content %}
 <!-- Search Header -->

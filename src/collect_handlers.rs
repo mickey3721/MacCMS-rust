@@ -6,7 +6,7 @@ use crate::models::{Vod, Binding, PlaySource, PlayUrl, Collection};
 use crate::dto::{JsonResponse, VodApiListEntry, Category, VideoListResponse};
 use mongodb::bson::{doc, oid::ObjectId, DateTime};
 use std::time::{SystemTime, UNIX_EPOCH};
-use chrono::{Timelike, Utc};
+use chrono::Timelike;
 
 // 解析播放地址函数
 fn parse_play_urls(vod_play_from: &str, vod_play_url: &Option<String>) -> Vec<PlaySource> {
@@ -114,18 +114,34 @@ pub struct CollectProgress {
     pub log: String,
 }
 
+impl Default for CollectProgress {
+    fn default() -> Self {
+        Self {
+            status: "unknown".to_string(),
+            current_page: 0,
+            total_pages: 0,
+            success: 0,
+            failed: 0,
+            log: "未知状态".to_string(),
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub struct CollectProgressResponse {
     success: bool,
     progress: CollectProgress,
 }
 
+// 类型别名简化复杂类型
+type TaskProgressMap = std::collections::HashMap<String, (CollectProgress, String, Option<tokio::task::JoinHandle<()>>)>;
+type TaskProgressStore = tokio::sync::RwLock<TaskProgressMap>;
+
 // 全局任务进度存储
-static TASK_PROGRESS: std::sync::OnceLock<tokio::sync::RwLock<std::collections::HashMap<String, (CollectProgress, String)>>> = 
-    std::sync::OnceLock::new();
+static TASK_PROGRESS: std::sync::OnceLock<TaskProgressStore> = std::sync::OnceLock::new();
 
 // 初始化任务进度存储
-fn get_task_progress_store() -> &'static tokio::sync::RwLock<std::collections::HashMap<String, (CollectProgress, String)>> {
+fn get_task_progress_store() -> &'static TaskProgressStore {
     TASK_PROGRESS.get_or_init(|| tokio::sync::RwLock::new(std::collections::HashMap::new()))
 }
 
@@ -133,14 +149,44 @@ fn get_task_progress_store() -> &'static tokio::sync::RwLock<std::collections::H
 pub async fn get_task_progress(task_id: &str) -> Option<CollectProgress> {
     let store = get_task_progress_store();
     let progress_map = store.read().await;
-    progress_map.get(task_id).map(|(progress, _)| progress.clone())
+    progress_map.get(task_id).map(|(progress, _, _)| progress.clone())
 }
 
 // 更新任务进度
 async fn update_task_progress(task_id: &str, progress: CollectProgress, collection_name: String) {
     let store = get_task_progress_store();
     let mut progress_map = store.write().await;
-    progress_map.insert(task_id.to_string(), (progress, collection_name));
+    if let Some((current_progress, current_name, handle)) = progress_map.get_mut(task_id) {
+        *current_progress = progress;
+        *current_name = collection_name;
+        // 保持原有的handle不变，不需要克隆
+    } else {
+        progress_map.insert(task_id.to_string(), (progress, collection_name, None));
+    }
+}
+
+// 停止任务
+pub async fn stop_task(task_id: &str) -> bool {
+    let store = get_task_progress_store();
+    let mut progress_map = store.write().await;
+    
+    if let Some((mut progress, collection_name, handle)) = progress_map.remove(task_id) {
+        // 取消任务
+        if let Some(task_handle) = handle {
+            task_handle.abort();
+        }
+        
+        // 标记任务为已停止
+        progress.status = "stopped".to_string();
+        progress.log = "任务已手动停止".to_string();
+        
+        // 将任务重新插入，但状态为已停止且清除句柄
+        progress_map.insert(task_id.to_string(), (progress, collection_name, None));
+        
+        true
+    } else {
+        false
+    }
 }
 
 // 获取所有运行中的任务
@@ -151,7 +197,7 @@ pub async fn get_all_running_tasks() -> Vec<serde_json::Value> {
     let mut tasks = Vec::new();
     let now = chrono::Utc::now();
     
-    for (task_id, (progress, collection_name)) in progress_map.iter() {
+    for (task_id, (progress, collection_name, _)) in progress_map.iter() {
         // 只返回运行中的任务
         let should_include = progress.status == "running";
         
@@ -310,8 +356,67 @@ pub async fn start_collect_task(
     // 生成任务ID
     let task_id = ObjectId::new().to_hex();
     
-    // 这里应该启动一个后台任务来执行采集
-    // 为了简化，我们直接返回任务ID
+    // 获取采集源配置
+    let collections_collection = db.collection::<Collection>("collections");
+    let collection = match collections_collection.find_one(doc! {"_id": ObjectId::parse_str(&request.collection_id).unwrap()}, None).await {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return HttpResponse::NotFound().json(serde_json::json!({
+                "success": false,
+                "message": "采集源不存在"
+            }));
+        }
+        Err(e) => {
+            eprintln!("Failed to get collection: {}", e);
+            return HttpResponse::InternalServerError().json(serde_json::json!({
+                "success": false,
+                "message": "获取采集源失败"
+            }));
+        }
+    };
+    
+    // 初始化任务进度
+    let initial_progress = CollectProgress {
+        status: "running".to_string(),
+        current_page: 0,
+        total_pages: 1,
+        success: 0,
+        failed: 0,
+        log: "正在启动采集任务...".to_string(),
+    };
+    update_task_progress(&task_id, initial_progress.clone(), collection.collect_name.clone()).await;
+    
+    // 启动后台采集任务
+    let db_clone = db.clone();
+    let task_id_clone = task_id.clone();
+    let collection_name_clone = collection.collect_name.clone();
+    let handle = tokio::spawn(async move {
+        let hours = request.hours.map(|h| h.to_string());
+        let task_id_for_closure = task_id_clone.clone();
+        match start_batch_collect(&db_clone, collection.clone(), hours, task_id_clone).await {
+            Ok(_) => {
+                // 任务正常完成
+                let mut progress = get_task_progress(&task_id_for_closure).await.unwrap_or_default();
+                progress.status = "completed".to_string();
+                progress.log = format!("采集完成，成功: {}，失败: {}", progress.success, progress.failed);
+                update_task_progress(&task_id_for_closure, progress, collection_name_clone).await;
+            }
+            Err(e) => {
+                // 任务失败
+                let mut progress = get_task_progress(&task_id_for_closure).await.unwrap_or_default();
+                progress.status = "failed".to_string();
+                progress.log = format!("采集失败: {}", e);
+                update_task_progress(&task_id_for_closure, progress, collection_name_clone).await;
+            }
+        }
+    });
+    
+    // 存储任务句柄
+    let store = get_task_progress_store();
+    let mut progress_map = store.write().await;
+    if let Some((progress, collection_name, _)) = progress_map.get_mut(&task_id) {
+        *progress_map.get_mut(&task_id).unwrap() = (progress.clone(), collection_name.clone(), Some(handle));
+    }
     
     HttpResponse::Ok().json(serde_json::json!({
         "success": true,
@@ -392,6 +497,13 @@ pub async fn start_batch_collect(
     
     // 逐页采集
     for page in 1..=total_pages {
+        // 检查任务是否被停止
+        if let Some(current_progress) = get_task_progress(&task_id).await {
+            if current_progress.status == "stopped" {
+                return Ok(()); // 任务已被停止，直接返回
+            }
+        }
+        
         progress.current_page = page;
         progress.log = format!("正在采集第 {}/{} 页", page, total_pages);
         update_task_progress(&task_id, progress.clone(), collection.collect_name.clone()).await;
@@ -436,6 +548,13 @@ async fn collect_page(
     let mut page_failed = 0;
     
     for vod_data in api_response.list {
+        // 检查任务是否被停止
+        if let Some(current_progress) = get_task_progress(task_id).await {
+            if current_progress.status == "stopped" {
+                return Ok(()); // 任务已被停止，直接返回
+            }
+        }
+        
         match collect_single_video(db, collection, &vod_data).await {
             Ok(_) => page_success += 1,
             Err(e) => {

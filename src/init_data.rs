@@ -1,6 +1,6 @@
 use mongodb::{Database, bson::doc};
 use crate::models::{Config, Type, Vod, Collection, Binding, PlaySource, PlayUrl};
-use mongodb::bson::{DateTime, oid::ObjectId};
+use mongodb::bson::DateTime;
 
 // 检查配置是否已存在
 async fn config_exists(db: &Database, config_key: &str) -> Result<bool, mongodb::error::Error> {
@@ -753,16 +753,42 @@ pub async fn init_bindings(db: &Database) -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
+// 检查数据库是否为空（没有任何数据）
+async fn is_database_empty(db: &Database) -> Result<bool, Box<dyn std::error::Error>> {
+    // 检查主要集合是否都为空
+    let configs_count = db.collection::<mongodb::bson::Document>("configs")
+        .count_documents(None, None).await?;
+    let types_count = db.collection::<mongodb::bson::Document>("types")
+        .count_documents(None, None).await?;
+    let vods_count = db.collection::<mongodb::bson::Document>("vods")
+        .count_documents(None, None).await?;
+    
+    // 如果所有主要集合都为空，则认为数据库是空的
+    Ok(configs_count == 0 && types_count == 0 && vods_count == 0)
+}
+
 // 执行所有初始化
 pub async fn init_all_data(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
-    println!("开始初始化数据...");
+    // 检查数据库是否为空
+    match is_database_empty(db).await {
+        Ok(true) => {
+            println!("数据库为空，开始初始化数据...");
+            
+            init_website_config(db).await?;
+            init_test_categories(db).await?;
+            init_test_videos(db).await?;
+            init_collection_sources(db).await?;
+            init_bindings(db).await?;
+            
+            println!("所有数据初始化完成！");
+        }
+        Ok(false) => {
+            println!("数据库已包含数据，跳过初始化");
+        }
+        Err(e) => {
+            eprintln!("检查数据库状态失败: {}，跳过初始化", e);
+        }
+    }
     
-    init_website_config(db).await?;
-    init_test_categories(db).await?;
-    init_test_videos(db).await?;
-    init_collection_sources(db).await?;
-    init_bindings(db).await?;
-    
-    println!("所有数据初始化完成！");
     Ok(())
 }

@@ -120,12 +120,42 @@
         </div>
     </div>
 
+    <!-- 批量操作栏 -->
+    <div id="batchActionsBar" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 hidden">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="text-sm font-medium text-blue-800">
+                    已选择 <span id="selectedCount">0</span> 项
+                </span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="batchDelete()"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                        </path>
+                    </svg>
+                    批量删除
+                </button>
+                <button onclick="clearSelection()"
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    取消选择
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 视频列表 -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                            <input type="checkbox" id="selectAllCheckbox"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">视频信息
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类
@@ -147,19 +177,23 @@
         </div>
 
         <!-- 分页组件 -->
-        <div id="paginationContainer" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 hidden">
+        <div id="paginationContainer"
+            class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 hidden">
             <div class="flex-1 flex justify-between sm:hidden">
-                <button id="prevPageMobile" onclick="changePage('prev')" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <button id="prevPageMobile" onclick="changePage('prev')"
+                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                     上一页
                 </button>
-                <button id="nextPageMobile" onclick="changePage('next')" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <button id="nextPageMobile" onclick="changePage('next')"
+                    class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                     下一页
                 </button>
             </div>
             <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                     <p class="text-sm text-gray-700">
-                        显示第 <span id="startItem" class="font-medium">1</span> 到 <span id="endItem" class="font-medium">10</span> 条，
+                        显示第 <span id="startItem" class="font-medium">1</span> 到 <span id="endItem"
+                            class="font-medium">10</span> 条，
                         共 <span id="totalItems" class="font-medium">0</span> 条记录
                     </p>
                 </div>
@@ -336,6 +370,35 @@
     </div>
 </div>
 
+<!-- 批量删除确认模态框 -->
+<div id="batchDeleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                    </path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mt-2">确认批量删除</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">您确定要删除选中的 <span id="batchDeleteCount">0</span> 个视频吗？此操作无法撤销。</p>
+            </div>
+            <div class="flex justify-center space-x-3 mt-4">
+                <button onclick="closeBatchDeleteModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    取消
+                </button>
+                <button onclick="executeBatchDelete()"
+                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    批量删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Toast 通知 -->
 <div id="toast" class="fixed top-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 hidden z-50">
     <div class="flex items-center">
@@ -363,6 +426,7 @@
     let totalItems = 0;
     let totalPages = 0;
     let searchTimeout = null;
+    let selectedVods = new Set();
 
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', function () {
@@ -371,24 +435,27 @@
         updateStats();
 
         // 绑定搜索和筛选事件 - 使用防抖
-        document.getElementById('searchInput').addEventListener('input', function() {
+        document.getElementById('searchInput').addEventListener('input', function () {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 currentPage = 1;
                 loadVods();
             }, 300);
         });
-        document.getElementById('categoryFilter').addEventListener('change', function() {
+        document.getElementById('categoryFilter').addEventListener('change', function () {
             currentPage = 1;
             loadVods();
         });
-        document.getElementById('statusFilter').addEventListener('change', function() {
+        document.getElementById('statusFilter').addEventListener('change', function () {
             currentPage = 1;
             loadVods();
         });
 
         // 绑定表单提交事件
         document.getElementById('vodForm').addEventListener('submit', handleFormSubmit);
+
+        // 绑定全选功能
+        document.getElementById('selectAllCheckbox').addEventListener('change', handleSelectAll);
     });
 
     // 加载分类数据
@@ -432,7 +499,7 @@
         const search = document.getElementById('searchInput').value;
         const categoryId = document.getElementById('categoryFilter').value;
         const status = document.getElementById('statusFilter').value;
-        
+
         let url = `/api/admin/vods?page=${currentPage}&limit=${currentLimit}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
         if (categoryId) url += `&type_id=${categoryId}`;
@@ -447,7 +514,7 @@
                     currentPage = data.page;
                     currentLimit = data.limit;
                     totalPages = Math.ceil(totalItems / currentLimit);
-                    
+
                     console.log('Loaded vods:', vods);
                     renderTable();
                     renderPagination();
@@ -504,9 +571,14 @@
             const statusText = getStatusText(vod.vod_status);
             const statusClass = getStatusClass(vod.vod_status);
             const vodId = vod.id || (vod._id && vod._id.$oid) || '';
+            const isSelected = selectedVods.has(vodId);
 
             return `
             <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <input type="checkbox" class="vod-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                           data-vod-id="${vodId}" ${isSelected ? 'checked' : ''} onchange="handleVodSelection('${vodId}')">
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center">
                         <div class="flex-shrink-0 h-12 w-20">
@@ -539,6 +611,10 @@
             </tr>
         `;
         }).join('');
+
+        // 更新批量操作相关UI
+        updateBatchActionsBar();
+        updateSelectAllCheckbox();
     }
 
     // 获取状态文本
@@ -561,20 +637,141 @@
         }
     }
 
+    // 处理单个视频选择
+    function handleVodSelection(vodId) {
+        if (selectedVods.has(vodId)) {
+            selectedVods.delete(vodId);
+        } else {
+            selectedVods.add(vodId);
+        }
+        updateBatchActionsBar();
+        updateSelectAllCheckbox();
+    }
+
+    // 处理全选功能
+    function handleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const isChecked = selectAllCheckbox.checked;
+
+        if (isChecked) {
+            // 选择当前页所有视频
+            vods.forEach(vod => {
+                const vodId = vod.id || (vod._id && vod._id.$oid) || '';
+                selectedVods.add(vodId);
+            });
+        } else {
+            // 取消选择当前页所有视频
+            vods.forEach(vod => {
+                const vodId = vod.id || (vod._id && vod._id.$oid) || '';
+                selectedVods.delete(vodId);
+            });
+        }
+
+        // 更新所有复选框状态
+        document.querySelectorAll('.vod-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+
+        updateBatchActionsBar();
+    }
+
+    // 更新全选复选框状态
+    function updateSelectAllCheckbox() {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const currentPageVodIds = vods.map(vod => vod.id || (vod._id && vod._id.$oid) || '');
+        const allCurrentPageSelected = currentPageVodIds.every(id => selectedVods.has(id));
+        const someCurrentPageSelected = currentPageVodIds.some(id => selectedVods.has(id));
+
+        selectAllCheckbox.checked = allCurrentPageSelected;
+        selectAllCheckbox.indeterminate = someCurrentPageSelected && !allCurrentPageSelected;
+    }
+
+    // 更新批量操作栏
+    function updateBatchActionsBar() {
+        const batchActionsBar = document.getElementById('batchActionsBar');
+        const selectedCount = document.getElementById('selectedCount');
+
+        if (selectedVods.size > 0) {
+            batchActionsBar.classList.remove('hidden');
+            selectedCount.textContent = selectedVods.size;
+        } else {
+            batchActionsBar.classList.add('hidden');
+        }
+    }
+
+    // 清除选择
+    function clearSelection() {
+        selectedVods.clear();
+        document.querySelectorAll('.vod-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        document.getElementById('selectAllCheckbox').checked = false;
+        document.getElementById('selectAllCheckbox').indeterminate = false;
+        updateBatchActionsBar();
+    }
+
+    // 批量删除
+    function batchDelete() {
+        if (selectedVods.size === 0) {
+            showToast('请先选择要删除的视频', 'warning');
+            return;
+        }
+
+        document.getElementById('batchDeleteCount').textContent = selectedVods.size;
+        document.getElementById('batchDeleteModal').classList.remove('hidden');
+    }
+
+    // 执行批量删除
+    function executeBatchDelete() {
+        if (selectedVods.size === 0) return;
+
+        const vodIds = Array.from(selectedVods);
+
+        fetch('/api/admin/vods', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ids: vodIds })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.code === 1) {
+                    showToast(`成功删除 ${data.deleted_count || vodIds.length} 个视频`, 'success');
+                    clearSelection();
+                    loadVods(); // 重新加载数据
+                } else {
+                    showToast('批量删除失败: ' + (data.msg || '未知错误'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error batch deleting vods:', error);
+                showToast('批量删除失败', 'error');
+            })
+            .finally(() => {
+                closeBatchDeleteModal();
+            });
+    }
+
+    // 关闭批量删除确认模态框
+    function closeBatchDeleteModal() {
+        document.getElementById('batchDeleteModal').classList.add('hidden');
+    }
+
     // 格式化日期
     function formatDate(dateObj) {
         if (!dateObj) return '未知';
-        
+
         // 处理 MongoDB 日期格式
         if (dateObj.$date && dateObj.$date.$numberLong) {
             return new Date(parseInt(dateObj.$date.$numberLong)).toLocaleDateString();
         }
-        
+
         // 处理标准日期格式
         if (typeof dateObj === 'string') {
             return new Date(dateObj).toLocaleDateString();
         }
-        
+
         return '未知';
     }
 
@@ -582,20 +779,20 @@
     function renderPagination() {
         const startItem = (currentPage - 1) * currentLimit + 1;
         const endItem = Math.min(currentPage * currentLimit, totalItems);
-        
+
         // 更新分页信息
         document.getElementById('startItem').textContent = totalItems > 0 ? startItem : 0;
         document.getElementById('endItem').textContent = endItem;
         document.getElementById('totalItems').textContent = totalItems;
-        
+
         // 更新移动端按钮状态
         document.getElementById('prevPageMobile').disabled = currentPage <= 1;
         document.getElementById('nextPageMobile').disabled = currentPage >= totalPages;
-        
+
         // 生成桌面端分页按钮
         const paginationNav = document.getElementById('paginationNav');
         let paginationHTML = '';
-        
+
         // 上一页按钮
         paginationHTML += `
             <button onclick="changePage('prev')" ${currentPage <= 1 ? 'disabled' : ''} 
@@ -604,15 +801,15 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>`;
-        
+
         // 页码按钮
         let startPage = Math.max(1, currentPage - 2);
         let endPage = Math.min(totalPages, startPage + 4);
-        
+
         if (endPage - startPage < 4) {
             startPage = Math.max(1, endPage - 4);
         }
-        
+
         // 第一页
         if (startPage > 1) {
             paginationHTML += `<button onclick="goToPage(1)" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">1</button>`;
@@ -620,18 +817,18 @@
                 paginationHTML += `<span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>`;
             }
         }
-        
+
         // 页码
         for (let i = startPage; i <= endPage; i++) {
             paginationHTML += `
                 <button onclick="goToPage(${i})" 
-                    class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${i === currentPage 
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}">
+                    class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${i === currentPage
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}">
                     ${i}
                 </button>`;
         }
-        
+
         // 最后一页
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) {
@@ -639,7 +836,7 @@
             }
             paginationHTML += `<button onclick="goToPage(${totalPages})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">${totalPages}</button>`;
         }
-        
+
         // 下一页按钮
         paginationHTML += `
             <button onclick="changePage('next')" ${currentPage >= totalPages ? 'disabled' : ''} 
@@ -648,7 +845,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
             </button>`;
-        
+
         paginationNav.innerHTML = paginationHTML;
     }
 

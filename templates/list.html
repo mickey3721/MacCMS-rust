@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}{{ category.type_name }} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
-{% block description %}{{ category.type_name }}频道 - 观看最新最全的{{ category.type_name }}视频，包括电影、电视剧、综艺、动漫等{% endblock
+{% block title %}{{ display_category.type_name }} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
+{% block description %}{{ display_category.type_name }}频道 - {{ SITEDESCRIPTION | default(value="观看最新最全的" ~ display_category.type_name ~ "视频，包括电影、电视剧、综艺、动漫等") }}{% endblock
 description %}
-{% block keywords %}{{ category.type_name }},在线{{ category.type_name }},免费{{ category.type_name }},高清{{
-category.type_name }}{% endblock keywords %}
+{% block keywords %}{{ display_category.type_name }},在线{{ display_category.type_name }},免费{{ display_category.type_name }},高清{{ display_category.type_name }},{{ SITEKEYWORDS | default(value="") }}{% endblock keywords %}
 
 {% block head %}
 <style>
@@ -48,7 +47,15 @@ category.type_name }}{% endblock keywords %}
                 <i class="fas fa-home"></i> 首页
             </a>
             <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
-            <span class="text-gray-600">{{ category.type_name }}</span>
+            {% if subcategory %}
+            <a href="/list/{{ category.type_id }}" class="text-blue-600 hover:text-blue-700">
+                {{ category.type_name }}
+            </a>
+            <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+            <span class="text-gray-600">{{ subcategory.type_name }}</span>
+            {% else %}
+            <span class="text-gray-600">{{ display_category.type_name }}</span>
+            {% endif %}
         </nav>
     </div>
 </div>
@@ -57,8 +64,8 @@ category.type_name }}{% endblock keywords %}
 <section class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
     <div class="container mx-auto px-4">
         <div class="text-center">
-            <h1 class="text-3xl md:text-4xl font-bold mb-4">{{ category.type_name }}</h1>
-            <p class="text-lg opacity-90">发现最精彩的{{ category.type_name }}内容</p>
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">{{ display_category.type_name }}</h1>
+            <p class="text-lg opacity-90">发现最精彩的{{ display_category.type_name }}内容</p>
         </div>
     </div>
 </section>

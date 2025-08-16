@@ -1146,15 +1146,35 @@
             return;
         }
 
-        // 这里应该调用停止任务的API
         showToast('正在停止任务...', 'info');
 
-        // 暂时模拟停止任务
-        setTimeout(function () {
-            showToast('任务已停止', 'success');
-            // 刷新任务列表
-            fetchRunningTasks();
-        }, 1000);
+        // 调用后端停止任务API
+        fetch('/api/collect/stop/' + taskId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('停止任务失败');
+                }
+            })
+            .then(function (data) {
+                if (data.success) {
+                    showToast(data.message || '任务已停止', 'success');
+                    // 立即刷新任务列表
+                    fetchRunningTasks();
+                } else {
+                    showToast(data.message || '停止任务失败', 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('停止任务失败: ' + error.message, 'error');
+            });
     }
 
     // 在采集任务启动后添加到监控列表

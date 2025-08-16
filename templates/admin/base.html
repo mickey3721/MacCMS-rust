@@ -151,6 +151,13 @@
                         <div class="text-sm text-gray-500">
                             {{ now() | date(format="%Y-%m-%d %H:%M") }}
                         </div>
+                        <!-- 刷新缓存按钮 -->
+                        <button id="refreshCacheBtn" class="flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            刷新缓存
+                        </button>
                         <div class="flex items-center space-x-2">
                             <div class="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
                                 <span class="text-sm font-medium text-white">A</span>
@@ -227,6 +234,42 @@
                     link.classList.remove('hover:bg-sidebar-light');
                 }
             });
+
+            // 刷新缓存按钮事件
+            const refreshCacheBtn = document.getElementById('refreshCacheBtn');
+            if (refreshCacheBtn) {
+                refreshCacheBtn.addEventListener('click', async function() {
+                    // 禁用按钮
+                    this.disabled = true;
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<svg class="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>刷新中...';
+
+                    try {
+                        const response = await fetch('/admin/refresh-cache', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            credentials: 'same-origin'
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            window.showNotification(result.message, 'success', 3000);
+                        } else {
+                            window.showNotification(result.message, 'error', 5000);
+                        }
+                    } catch (error) {
+                        console.error('刷新缓存失败:', error);
+                        window.showNotification('网络错误，请稍后重试', 'error', 5000);
+                    } finally {
+                        // 恢复按钮状态
+                        this.disabled = false;
+                        this.innerHTML = originalText;
+                    }
+                });
+            }
         });
 
         // Global notification system

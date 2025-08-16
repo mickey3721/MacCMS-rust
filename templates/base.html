@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ SITENAME | default(value="maccms-rust") }}{% endblock title %}</title>
-    <meta name="description" content="{% block description %}专业的视频网站，提供最新最全的影视资源{% endblock description %}">
-    <meta name="keywords" content="{% block keywords %}视频,电影,电视剧,综艺,动漫{% endblock keywords %}">
+    <meta name="description" content="{% block description %}{{ SITEDESCRIPTION | default(value="专业的视频网站，提供最新最全的影视资源") }}{% endblock description %}">
+    <meta name="keywords" content="{% block keywords %}{{ SITEKEYWORDS | default(value="视频,电影,电视剧,综艺,动漫") }}{% endblock keywords %}">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>

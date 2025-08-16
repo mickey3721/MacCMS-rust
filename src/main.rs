@@ -9,16 +9,18 @@ mod admin_handlers;
 mod init_data;
 mod collect_handlers;
 mod index_manager;
+mod site_data;
 
 use admin_handlers::{
     get_types, create_type, update_type, delete_type, 
     get_bindings, create_or_update_binding, get_collection_binding_status,
     get_configs, get_config_by_key, create_config, update_config, delete_config,
     get_collections, create_collection, update_collection, delete_collection,
-    get_vods_admin, create_vod, update_vod, delete_vod,
-    start_collection_collect, get_collect_progress, get_running_tasks,
+    get_vods_admin, create_vod, update_vod, delete_vod, batch_delete_vods,
+    start_collection_collect, get_collect_progress, get_running_tasks, stop_collect_task,
     create_indexes, get_index_status, list_indexes, get_statistics
 };
+use site_data::SiteDataManager;
 use collect_handlers::{
     get_collect_categories, get_collect_videos, start_collect_task
 };
@@ -30,7 +32,6 @@ use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix_web_flash_messages::{FlashMessagesFramework, storage::CookieMessageStore};
 use actix_web::cookie::Key;
 use actix_files::Files;
-use std::env;
 
 // Handler to get a list of vods
 #[get("/vods")]
@@ -84,6 +85,19 @@ async fn main() -> std::io::Result<()> {
     
     auth::ensure_admin_user_exists(&db).await;
     
+    // 初始化站点数据管理器
+    let site_data_manager = SiteDataManager::new(db.clone());
+    println!("🔧 正在初始化站点数据缓存...");
+    match site_data_manager.initialize().await {
+        Ok(_) => {
+            println!("✅ 站点数据缓存初始化完成");
+        }
+        Err(e) => {
+            eprintln!("⚠️  站点数据缓存初始化失败: {}", e);
+            // 不退出应用，因为基本功能仍可使用
+        }
+    }
+    
     // 初始化测试数据
     println!("🔧 正在初始化测试数据...");
     match init_data::init_all_data(&db).await {
@@ -104,6 +118,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             // Store the database connection in the application state
             .app_data(web::Data::new(db.clone()))
+            // Store the site data manager in the application state
+            .app_data(web::Data::new(site_data_manager.clone()))
             // Session and Flash Messages Middleware
             .wrap(FlashMessagesFramework::builder(
                 CookieMessageStore::builder(Key::generate()).build()
@@ -111,11 +127,11 @@ async fn main() -> std::io::Result<()> {
             
             .wrap(SessionMiddleware::builder(CookieSessionStore::default(), session_secret_key.clone()).build())
             // Web routes
-            .service(web::resource("/").route(web::get().to(web_handlers::home_page)))
-            .service(web::resource("/list/{type_id}").route(web::get().to(web_handlers::list_page_handler)))
-            .service(web::resource("/detail/{vod_id}").route(web::get().to(web_handlers::video_detail_handler)))
-            .service(web::resource("/play/{vod_id}/{play_index}").route(web::get().to(web_handlers::video_player_handler)))
-            .service(web::resource("/search").route(web::get().to(web_handlers::search_page_handler)))
+            .service(web::resource("/").route(web::get().to(web_handlers::home_page_wrapper)))
+            .service(web::resource("/list/{type_id}").route(web::get().to(web_handlers::list_page_handler_wrapper)))
+            .service(web::resource("/detail/{vod_id}").route(web::get().to(web_handlers::video_detail_handler_wrapper)))
+            .service(web::resource("/play/{vod_id}/{play_index}").route(web::get().to(web_handlers::video_player_handler_wrapper)))
+            .service(web::resource("/search").route(web::get().to(web_handlers::search_page_handler_wrapper)))
             // Static files
             .service(Files::new("/static", "./static").show_files_listing())
             // Admin Web routes
@@ -132,6 +148,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/admin/config").route(web::get().to(web_handlers::admin_config_page)))
             .service(web::resource("/admin/indexes").route(web::get().to(web_handlers::admin_indexes_page)))
             .service(web::resource("/admin/init-data").route(web::post().to(web_handlers::init_data_handler)))
+            .service(web::resource("/admin/refresh-cache").route(web::post().to(web_handlers::refresh_cache_handler)))
             // API routes
             .service(get_vods)
             .service(web::resource("/api/provide/vod").route(web::get().to(api_handlers::provide_vod)))
@@ -179,7 +196,8 @@ async fn main() -> std::io::Result<()> {
                     // Video Management
                     .service(web::resource("/vods")
                         .route(web::get().to(get_vods_admin))
-                        .route(web::post().to(create_vod)))
+                        .route(web::post().to(create_vod))
+                        .route(web::delete().to(batch_delete_vods)))
                     .service(web::resource("/vods/{id}")
                         .route(web::put().to(update_vod))
                         .route(web::delete().to(delete_vod)))
@@ -200,6 +218,7 @@ async fn main() -> std::io::Result<()> {
                     .service(web::resource("/categories").route(web::get().to(get_collect_categories)))
                     .service(web::resource("/videos").route(web::get().to(get_collect_videos)))
                     .service(web::resource("/start").route(web::post().to(start_collect_task)))
+                    .service(web::resource("/stop/{task_id}").route(web::post().to(stop_collect_task)))
                     .service(web::resource("/progress/{task_id}").route(web::get().to(get_collect_progress)))
             )
     })

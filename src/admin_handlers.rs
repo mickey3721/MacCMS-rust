@@ -88,6 +88,11 @@ pub struct VodRequest {
     pub vod_content: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchDeleteRequest {
+    pub ids: Vec<String>,
+}
+
 // --- Category Management API --- 
 
 // GET /api/admin/types
@@ -331,6 +336,30 @@ pub async fn get_running_tasks(session: Session) -> impl Responder {
     }))
 }
 
+// POST /api/admin/collect/stop/{task_id}
+pub async fn stop_collect_task(path: web::Path<String>, session: Session) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+
+    let task_id = path.into_inner();
+    
+    // 调用collect_handlers中的停止任务函数
+    let stopped = crate::collect_handlers::stop_task(&task_id).await;
+    
+    if stopped {
+        HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "任务已成功停止"
+        }))
+    } else {
+        HttpResponse::NotFound().json(json!({
+            "success": false,
+            "message": "任务不存在或已经停止"
+        }))
+    }
+}
+
 // DELETE /api/admin/collections/{id}
 pub async fn delete_collection(path: web::Path<String>, db: web::Data<Database>, session: Session) -> impl Responder {
     if let Err(response) = check_auth(&session) {
@@ -568,6 +597,59 @@ pub async fn delete_vod(path: web::Path<String>, db: web::Data<Database>, sessio
         Err(e) => {
             eprintln!("Failed to delete video: {}", e);
             HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to delete video"}))
+        }
+    }
+}
+
+// DELETE /api/admin/vods/batch
+pub async fn batch_delete_vods(
+    db: web::Data<Database>, 
+    batch_req: web::Json<BatchDeleteRequest>, 
+    session: Session
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+    
+    let collection = db.collection::<Vod>("vods");
+    let mut object_ids = Vec::new();
+    let mut invalid_ids = Vec::new();
+    
+    // Parse all IDs and separate valid from invalid
+    for id_str in &batch_req.ids {
+        match mongodb::bson::oid::ObjectId::parse_str(id_str) {
+            Ok(id) => object_ids.push(id),
+            Err(_) => invalid_ids.push(id_str.clone()),
+        }
+    }
+    
+    if object_ids.is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "No valid video IDs provided",
+            "invalid_ids": invalid_ids
+        }));
+    }
+    
+    // Delete all valid videos
+    match collection.delete_many(doc!{"_id": {"$in": object_ids}}, None).await {
+        Ok(result) => {
+            let response = json!({
+                "success": true,
+                "message": "Videos deleted successfully",
+                "deleted_count": result.deleted_count,
+                "invalid_ids": invalid_ids.len(),
+                "invalid_id_list": invalid_ids
+            });
+            HttpResponse::Ok().json(response)
+        }
+        Err(e) => {
+            eprintln!("Failed to batch delete videos: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "Failed to delete videos",
+                "error": e.to_string()
+            }))
         }
     }
 }

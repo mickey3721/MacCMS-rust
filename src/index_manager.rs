@@ -2,6 +2,7 @@ use mongodb::{Database, IndexModel, options::IndexOptions};
 use mongodb::bson::{doc, Document};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use futures::TryStreamExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IndexInfo {
@@ -34,7 +35,7 @@ impl IndexManager {
                     keys.insert("vod_year".to_string(), 1);
                     keys
                 },
-                name: "vod_name_year_idx".to_string(),
+                name: "vod_name_1_vod_year_1".to_string(),
                 unique: Some(true),
                 sparse: Some(true),
                 background: Some(true),
@@ -46,7 +47,7 @@ impl IndexManager {
                     keys.insert("type_id".to_string(), 1);
                     keys
                 },
-                name: "type_id_idx".to_string(),
+                name: "type_id_1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -58,7 +59,7 @@ impl IndexManager {
                     keys.insert("vod_pubdate".to_string(), -1);
                     keys
                 },
-                name: "vod_pubdate_desc_idx".to_string(),
+                name: "vod_pubdate_-1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -70,7 +71,7 @@ impl IndexManager {
                     keys.insert("vod_year".to_string(), 1);
                     keys
                 },
-                name: "vod_year_idx".to_string(),
+                name: "vod_year_1".to_string(),
                 unique: None,
                 sparse: Some(true),
                 background: Some(true),
@@ -83,7 +84,7 @@ impl IndexManager {
                     keys.insert("vod_pubdate".to_string(), -1);
                     keys
                 },
-                name: "vod_status_pubdate_idx".to_string(),
+                name: "vod_status_1_vod_pubdate_-1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -96,7 +97,7 @@ impl IndexManager {
                     keys.insert("vod_pubdate".to_string(), -1);
                     keys
                 },
-                name: "type_id_pubdate_idx".to_string(),
+                name: "type_id_1_vod_pubdate_-1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -110,7 +111,7 @@ impl IndexManager {
                     keys.insert("type_id".to_string(), 1);
                     keys
                 },
-                name: "type_id_unique_idx".to_string(),
+                name: "type_id_1".to_string(),
                 unique: Some(true),
                 sparse: None,
                 background: Some(true),
@@ -123,7 +124,7 @@ impl IndexManager {
                     keys.insert("type_sort".to_string(), 1);
                     keys
                 },
-                name: "type_pid_sort_idx".to_string(),
+                name: "type_pid_1_type_sort_1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -138,7 +139,7 @@ impl IndexManager {
                     keys.insert("external_id".to_string(), 1);
                     keys
                 },
-                name: "source_flag_external_id_unique_idx".to_string(),
+                name: "source_flag_1_external_id_1".to_string(),
                 unique: Some(true),
                 sparse: Some(true), // 使用稀疏索引避免空值问题
                 background: Some(true),
@@ -150,7 +151,7 @@ impl IndexManager {
                     keys.insert("local_type_id".to_string(), 1);
                     keys
                 },
-                name: "local_type_id_idx".to_string(),
+                name: "local_type_id_1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -165,7 +166,7 @@ impl IndexManager {
                     keys.insert("collect_type".to_string(), 1);
                     keys
                 },
-                name: "collect_status_type_idx".to_string(),
+                name: "collect_status_1_collect_type_1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -177,7 +178,7 @@ impl IndexManager {
                     keys.insert("created_at".to_string(), -1);
                     keys
                 },
-                name: "created_at_desc_idx".to_string(),
+                name: "created_at_-1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -191,7 +192,7 @@ impl IndexManager {
                     keys.insert("config_key".to_string(), 1);
                     keys
                 },
-                name: "config_key_unique_idx".to_string(),
+                name: "config_key_1".to_string(),
                 unique: Some(true),
                 sparse: None,
                 background: Some(true),
@@ -204,7 +205,7 @@ impl IndexManager {
                     keys.insert("config_sort".to_string(), 1);
                     keys
                 },
-                name: "config_group_sort_idx".to_string(),
+                name: "config_group_1_config_sort_1".to_string(),
                 unique: None,
                 sparse: None,
                 background: Some(true),
@@ -215,8 +216,23 @@ impl IndexManager {
     /// 检查索引是否已存在
     async fn index_exists(&self, collection_name: &str, index_name: &str) -> Result<bool, mongodb::error::Error> {
         let collection = self.db.collection::<mongodb::bson::Document>(collection_name);
-        match collection.list_index_names().await {
-            Ok(index_names) => Ok(index_names.contains(&index_name.to_string())),
+        
+        // 使用 list_indexes 获取索引列表，然后检查指定名称是否存在
+        match collection.list_indexes(None).await {
+            Ok(mut cursor) => {
+                let mut found = false;
+                while let Ok(Some(index_model)) = cursor.try_next().await {
+                    if let Some(options) = &index_model.options {
+                        if let Some(name) = &options.name {
+                            if name == index_name {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                Ok(found)
+            }
             Err(e) => {
                 eprintln!("❌ 获取索引列表失败: {}.{}: {}", collection_name, index_name, e);
                 Err(e)
@@ -317,15 +333,15 @@ impl IndexManager {
         let mut missing_indexes = Vec::new();
 
         for index_info in index_configs {
-            let collection = self.db.collection::<mongodb::bson::Document>(&index_info.collection);
-            match collection.list_index_names().await {
-                Ok(index_names) => {
-                    if !index_names.contains(&index_info.name) {
-                        missing_indexes.push(format!("{}.{}", index_info.collection, index_info.name));
-                    }
+            match self.index_exists(&index_info.collection, &index_info.name).await {
+                Ok(true) => {
+                    // 索引存在，继续检查下一个
+                }
+                Ok(false) => {
+                    missing_indexes.push(format!("{}.{}", index_info.collection, index_info.name));
                 }
                 Err(e) => {
-                    eprintln!("❌ 获取索引列表失败: {}.{}: {}", index_info.collection, index_info.name, e);
+                    eprintln!("❌ 检查索引失败: {}.{}: {}", index_info.collection, index_info.name, e);
                     missing_indexes.push(format!("{}.{}", index_info.collection, index_info.name));
                 }
             }
@@ -350,8 +366,17 @@ impl IndexManager {
             println!("\n📁 {}:", collection_name);
             let collection = self.db.collection::<mongodb::bson::Document>(collection_name);
             
-            match collection.list_index_names().await {
-                Ok(index_names) => {
+            match collection.list_indexes(None).await {
+                Ok(mut cursor) => {
+                    let mut index_names = Vec::new();
+                    while let Ok(Some(index_model)) = cursor.try_next().await {
+                        if let Some(options) = &index_model.options {
+                            if let Some(name) = &options.name {
+                                index_names.push(name.clone());
+                            }
+                        }
+                    }
+                    
                     if index_names.is_empty() {
                         println!("  无索引");
                     } else {

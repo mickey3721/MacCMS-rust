@@ -3,9 +3,8 @@
 {% block title %}{{ video.vod_name }} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
 {% block description %}{{ video.vod_name }}{% if video.vod_year %}({{ video.vod_year }}){% endif %} - {% if
 video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演，{{ video.vod_actor }}主演。{{ video.vod_content
-| striptags | truncate(length=100) }}{% endblock description %}
-{% block keywords %}{{ video.vod_name }},在线观看,免费观看,{{ video.vod_year }},{{ video.vod_area }},{{ video.vod_director }},{{
-video.vod_actor }}{% endblock keywords %}
+| striptags | truncate(length=100) }} - {{ SITENAME }}{% endblock description %}
+{% block keywords %}{{ video.vod_name }},在线观看,免费观看,{{ video.vod_year }},{{ video.vod_area }},{{ video.vod_director }},{{ video.vod_actor }},{{ SITEKEYWORDS | default(value="") }}{% endblock keywords %}
 
 {% block head %}
 <style>

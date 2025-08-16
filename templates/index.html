@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 {% block title %}首页 - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
-{% block description %}{{ SITENAME | default(value="maccms-rust") }} - 专业的在线视频网站，提供最新最全的电影、电视剧、综艺、动漫等视频资源{% endblock
+{% block description %}{{ SITEDESCRIPTION | default(value=SITENAME ~ " - 专业的在线视频网站，提供最新最全的电影、电视剧、综艺、动漫等视频资源") }}{% endblock
 description %}
-{% block keywords %}在线视频,电影,电视剧,综艺,动漫,高清视频{% endblock keywords %}
+{% block keywords %}{{ SITEKEYWORDS | default(value="在线视频,电影,电视剧,综艺,动漫,高清视频") }}{% endblock keywords %}
 
 {% block content %}
 <!-- Hero Section -->
