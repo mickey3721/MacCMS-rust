@@ -258,6 +258,161 @@ fetch('/api/admin/vods?page=2&limit=20&type_id=1&status=1&search=关键词')
 
 ## 🔧 部署指南
 
+### Release 包安装（推荐）
+
+这是最简单的部署方式，适合生产环境快速部署。
+
+#### 1. 下载 Release 包
+
+```bash
+# 下载最新版本的 Linux 二进制包
+wget https://github.com/your-repo/maccms_rust/releases/latest/download/linux.zip
+
+# 解压到目标目录
+sudo mkdir -p /opt/maccms_rust
+sudo unzip linux.zip -d /opt/maccms_rust
+cd /opt/maccms_rust
+```
+
+#### 2. 创建配置文件
+
+```bash
+# 创建环境变量配置文件
+sudo nano .env
+```
+
+配置文件内容：
+```env
+# 数据库连接
+DATABASE_URL=mongodb://localhost:27017/maccms_rust
+
+# 服务器配置
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8080
+
+# 管理员账户
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_password
+
+# 会话密钥（请修改为随机字符串）
+SESSION_SECRET=your_random_session_secret_key_here
+
+# 日志级别
+RUST_LOG=info
+```
+
+#### 3. 设置权限
+
+```bash
+# 设置二进制文件执行权限
+sudo chmod +x maccms_rust
+
+# 创建专用用户（可选，推荐）
+sudo useradd -r -s /bin/false maccms
+sudo chown -R maccms:maccms /opt/maccms_rust
+```
+
+#### 4. 启动方式
+
+**方式一：使用 nohup 后台运行**
+
+```bash
+# 切换到应用目录
+cd /opt/maccms_rust
+
+# 后台启动
+nohup ./maccms_rust > maccms.log 2>&1 &
+
+# 查看进程状态
+ps aux | grep maccms_rust
+
+# 查看日志
+tail -f maccms.log
+```
+
+**方式二：使用 systemctl 服务管理（推荐）**
+
+创建 systemd 服务文件：
+```bash
+sudo nano /etc/systemd/system/maccms-rust.service
+```
+
+服务配置内容：
+```ini
+[Unit]
+Description=MacCMS Rust Edition
+After=network.target mongodb.service
+Requires=mongodb.service
+
+[Service]
+Type=simple
+User=maccms
+Group=maccms
+WorkingDirectory=/opt/maccms_rust
+ExecStart=/opt/maccms_rust/maccms_rust
+Restart=always
+RestartSec=10
+KillMode=mixed
+KillSignal=SIGTERM
+
+# 环境变量
+Environment=RUST_LOG=info
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/maccms_rust
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动和管理服务：
+```bash
+# 重新加载 systemd 配置
+sudo systemctl daemon-reload
+
+# 启动服务
+sudo systemctl start maccms-rust
+
+# 设置开机自启
+sudo systemctl enable maccms-rust
+
+# 查看服务状态
+sudo systemctl status maccms-rust
+
+# 查看服务日志
+sudo journalctl -u maccms-rust -f
+
+# 重启服务
+sudo systemctl restart maccms-rust
+
+# 停止服务
+sudo systemctl stop maccms-rust
+```
+
+#### 5. 验证部署
+
+```bash
+# 检查服务是否正常运行
+curl http://localhost:8080/api/health
+
+# 访问管理后台
+# 浏览器打开: http://your-server-ip:8080/admin
+```
+
+#### 6. 防火墙配置
+
+```bash
+# Ubuntu/Debian
+sudo ufw allow 8080
+
+# CentOS/RHEL
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --reload
+```
+
 ### Docker 部署
 
 ```dockerfile
