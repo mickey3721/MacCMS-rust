@@ -1,0 +1,829 @@
+{% extends "admin/base.html" %}
+
+{% block title %}视频管理{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <!-- 页面标题 -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">视频管理</h1>
+        <p class="text-gray-600 mt-2">管理您的视频内容</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-100 rounded-lg">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">总视频数</p>
+                    <p class="text-2xl font-bold text-gray-900" id="totalVideos">0</p>
+                    <p class="text-xs text-gray-500 mt-1">系统中的视频总数</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-100 rounded-lg">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">已发布</p>
+                    <p class="text-2xl font-bold text-gray-900" id="publishedVideos">0</p>
+                    <p class="text-xs text-gray-500 mt-1">已发布的视频</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-yellow-100 rounded-lg">
+                    <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">待审核</p>
+                    <p class="text-2xl font-bold text-gray-900" id="pendingVideos">0</p>
+                    <p class="text-xs text-gray-500 mt-1">等待审核的视频</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-red-100 rounded-lg">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728">
+                        </path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">已禁用</p>
+                    <p class="text-2xl font-bold text-gray-900" id="disabledVideos">0</p>
+                    <p class="text-xs text-gray-500 mt-1">已禁用的视频</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作栏 -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <!-- 搜索框 -->
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="搜索视频名称..."
+                        class="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+
+                <!-- 分类筛选 -->
+                <select id="categoryFilter"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">所有分类</option>
+                </select>
+
+                <!-- 状态筛选 -->
+                <select id="statusFilter"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">所有状态</option>
+                    <option value="1">已发布</option>
+                    <option value="0">待审核</option>
+                    <option value="2">已禁用</option>
+                </select>
+            </div>
+
+            <!-- 添加按钮 -->
+            <button onclick="openAddModal()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                添加视频
+            </button>
+        </div>
+    </div>
+
+    <!-- 视频列表 -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">视频信息
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布时间
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">地区/年份
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="videoTableBody" class="bg-white divide-y divide-gray-200">
+                    <!-- 视频列表将通过 JavaScript 动态填充 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页组件 -->
+        <div id="paginationContainer" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 hidden">
+            <div class="flex-1 flex justify-between sm:hidden">
+                <button id="prevPageMobile" onclick="changePage('prev')" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    上一页
+                </button>
+                <button id="nextPageMobile" onclick="changePage('next')" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    下一页
+                </button>
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        显示第 <span id="startItem" class="font-medium">1</span> 到 <span id="endItem" class="font-medium">10</span> 条，
+                        共 <span id="totalItems" class="font-medium">0</span> 条记录
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" id="paginationNav">
+                        <!-- 分页按钮将通过 JavaScript 动态生成 -->
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div id="emptyState" class="text-center py-12 hidden">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                </path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">暂无视频</h3>
+            <p class="mt-1 text-sm text-gray-500">开始添加您的第一个视频吧</p>
+            <div class="mt-6">
+                <button onclick="openAddModal()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    添加视频
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑视频模态框 -->
+<div id="vodModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-lg bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900" id="modalTitle">添加视频</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="vodForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="vodName" class="block text-sm font-medium text-gray-700 mb-1">视频名称 *</label>
+                        <input type="text" id="vodName" name="vod_name" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="vodCategory" class="block text-sm font-medium text-gray-700 mb-1">分类 *</label>
+                        <select id="vodCategory" name="type_id" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">请选择分类</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="vodStatus" class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                        <select id="vodStatus" name="vod_status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="1">已发布</option>
+                            <option value="0">待审核</option>
+                            <option value="2">已禁用</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="vodPic" class="block text-sm font-medium text-gray-700 mb-1">封面图片</label>
+                        <input type="url" id="vodPic" name="vod_pic"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="http://example.com/image.jpg">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="vodActor" class="block text-sm font-medium text-gray-700 mb-1">主演</label>
+                        <input type="text" id="vodActor" name="vod_actor"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="vodDirector" class="block text-sm font-medium text-gray-700 mb-1">导演</label>
+                        <input type="text" id="vodDirector" name="vod_director"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="vodArea" class="block text-sm font-medium text-gray-700 mb-1">地区</label>
+                        <input type="text" id="vodArea" name="vod_area"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="vodYear" class="block text-sm font-medium text-gray-700 mb-1">年份</label>
+                        <input type="number" id="vodYear" name="vod_year" min="1900" max="2030"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="vodLang" class="block text-sm font-medium text-gray-700 mb-1">语言</label>
+                        <input type="text" id="vodLang" name="vod_lang"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="vodTag" class="block text-sm font-medium text-gray-700 mb-1">标签</label>
+                    <input type="text" id="vodTag" name="vod_tag"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="用逗号分隔多个标签">
+                </div>
+
+                <div>
+                    <label for="vodRemarks" class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                    <input type="text" id="vodRemarks" name="vod_remarks"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="vodContent" class="block text-sm font-medium text-gray-700 mb-1">视频简介</label>
+                    <textarea id="vodContent" name="vod_content" rows="4"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        取消
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
+                    </path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mt-2">确认删除</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">您确定要删除这个视频吗？此操作无法撤销。</p>
+            </div>
+            <div class="flex justify-center space-x-3 mt-4">
+                <button onclick="closeDeleteModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    取消
+                </button>
+                <button onclick="deleteVod()"
+                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 通知 -->
+<div id="toast" class="fixed top-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 hidden z-50">
+    <div class="flex items-center">
+        <div id="toastIcon" class="flex-shrink-0"></div>
+        <div class="ml-3">
+            <p id="toastMessage" class="text-sm font-medium text-gray-900"></p>
+        </div>
+        <button onclick="hideToast()" class="ml-4 text-gray-400 hover:text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    // 全局变量
+    let vods = [];
+    let categories = [];
+    let currentDeleteId = null;
+    let isEditing = false;
+    let editingId = null;
+    let currentPage = 1;
+    let currentLimit = 20;
+    let totalItems = 0;
+    let totalPages = 0;
+    let searchTimeout = null;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        loadCategories();
+        loadVods();
+        updateStats();
+
+        // 绑定搜索和筛选事件 - 使用防抖
+        document.getElementById('searchInput').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadVods();
+            }, 300);
+        });
+        document.getElementById('categoryFilter').addEventListener('change', function() {
+            currentPage = 1;
+            loadVods();
+        });
+        document.getElementById('statusFilter').addEventListener('change', function() {
+            currentPage = 1;
+            loadVods();
+        });
+
+        // 绑定表单提交事件
+        document.getElementById('vodForm').addEventListener('submit', handleFormSubmit);
+    });
+
+    // 加载分类数据
+    function loadCategories() {
+        fetch('/api/admin/types')
+            .then(response => response.json())
+            .then(data => {
+                categories = data;
+                populateCategorySelects();
+            })
+            .catch(error => {
+                console.error('Error loading categories:', error);
+                showToast('加载分类失败', 'error');
+            });
+    }
+
+    // 填充分类选择框
+    function populateCategorySelects() {
+        const categoryFilter = document.getElementById('categoryFilter');
+        const vodCategory = document.getElementById('vodCategory');
+
+        // 清空现有选项（保留默认选项）
+        categoryFilter.innerHTML = '<option value="">所有分类</option>';
+        vodCategory.innerHTML = '<option value="">请选择分类</option>';
+
+        categories.forEach(category => {
+            const filterOption = document.createElement('option');
+            filterOption.value = category.type_id;
+            filterOption.textContent = category.type_name;
+            categoryFilter.appendChild(filterOption);
+
+            const formOption = document.createElement('option');
+            formOption.value = category.type_id;
+            formOption.textContent = category.type_name;
+            vodCategory.appendChild(formOption);
+        });
+    }
+
+    // 加载视频数据
+    function loadVods() {
+        const search = document.getElementById('searchInput').value;
+        const categoryId = document.getElementById('categoryFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        let url = `/api/admin/vods?page=${currentPage}&limit=${currentLimit}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (categoryId) url += `&type_id=${categoryId}`;
+        if (status) url += `&status=${status}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 1) {
+                    vods = data.videos;
+                    totalItems = data.total;
+                    currentPage = data.page;
+                    currentLimit = data.limit;
+                    totalPages = Math.ceil(totalItems / currentLimit);
+                    
+                    console.log('Loaded vods:', vods);
+                    renderTable();
+                    renderPagination();
+                    updateStats();
+                } else {
+                    console.error('API error:', data.msg);
+                    showToast('加载视频失败: ' + data.msg, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading vods:', error);
+                showToast('加载视频失败', 'error');
+            });
+    }
+
+    // 更新统计数据
+    function updateStats() {
+        // 获取所有视频的统计数据，而不仅仅是当前页的
+        fetch('/api/admin/vods?limit=1')
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 1) {
+                    const total = data.total;
+                    // 为了简单起见，这里只显示总数，其他统计数据需要另外的API
+                    document.getElementById('totalVideos').textContent = total;
+                    document.getElementById('publishedVideos').textContent = 'N/A';
+                    document.getElementById('pendingVideos').textContent = 'N/A';
+                    document.getElementById('disabledVideos').textContent = 'N/A';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading stats:', error);
+            });
+    }
+
+    // 渲染表格
+    function renderTable() {
+        const tbody = document.getElementById('videoTableBody');
+        const emptyState = document.getElementById('emptyState');
+        const paginationContainer = document.getElementById('paginationContainer');
+
+        if (vods.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            paginationContainer.classList.add('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        paginationContainer.classList.remove('hidden');
+
+        tbody.innerHTML = vods.map(vod => {
+            const category = categories.find(cat => cat.type_id === vod.type_id);
+            const statusText = getStatusText(vod.vod_status);
+            const statusClass = getStatusClass(vod.vod_status);
+            const vodId = vod.id || (vod._id && vod._id.$oid) || '';
+
+            return `
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-12 w-20">
+                            <img class="h-12 w-20 rounded object-cover" src="${vod.vod_pic || '/static/images/default-poster.jpg'}" alt="${vod.vod_name}">
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">${vod.vod_name}</div>
+                            <div class="text-sm text-gray-500">${vod.vod_remarks || ''}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-sm text-gray-900">${category ? category.type_name : '未分类'}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                        ${statusText}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${formatDate(vod.vod_pubdate)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${vod.vod_area || ''} / ${vod.vod_year || ''}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="editVod('${vodId}')" class="text-blue-600 hover:text-blue-900 mr-3">编辑</button>
+                    <button onclick="confirmDelete('${vodId}')" class="text-red-600 hover:text-red-900">删除</button>
+                </td>
+            </tr>
+        `;
+        }).join('');
+    }
+
+    // 获取状态文本
+    function getStatusText(status) {
+        switch (status) {
+            case 1: return '已发布';
+            case 0: return '待审核';
+            case 2: return '已禁用';
+            default: return '未知';
+        }
+    }
+
+    // 获取状态样式类
+    function getStatusClass(status) {
+        switch (status) {
+            case 1: return 'bg-green-100 text-green-800';
+            case 0: return 'bg-yellow-100 text-yellow-800';
+            case 2: return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    }
+
+    // 格式化日期
+    function formatDate(dateObj) {
+        if (!dateObj) return '未知';
+        
+        // 处理 MongoDB 日期格式
+        if (dateObj.$date && dateObj.$date.$numberLong) {
+            return new Date(parseInt(dateObj.$date.$numberLong)).toLocaleDateString();
+        }
+        
+        // 处理标准日期格式
+        if (typeof dateObj === 'string') {
+            return new Date(dateObj).toLocaleDateString();
+        }
+        
+        return '未知';
+    }
+
+    // 渲染分页
+    function renderPagination() {
+        const startItem = (currentPage - 1) * currentLimit + 1;
+        const endItem = Math.min(currentPage * currentLimit, totalItems);
+        
+        // 更新分页信息
+        document.getElementById('startItem').textContent = totalItems > 0 ? startItem : 0;
+        document.getElementById('endItem').textContent = endItem;
+        document.getElementById('totalItems').textContent = totalItems;
+        
+        // 更新移动端按钮状态
+        document.getElementById('prevPageMobile').disabled = currentPage <= 1;
+        document.getElementById('nextPageMobile').disabled = currentPage >= totalPages;
+        
+        // 生成桌面端分页按钮
+        const paginationNav = document.getElementById('paginationNav');
+        let paginationHTML = '';
+        
+        // 上一页按钮
+        paginationHTML += `
+            <button onclick="changePage('prev')" ${currentPage <= 1 ? 'disabled' : ''} 
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage <= 1 ? 'cursor-not-allowed opacity-50' : ''}">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>`;
+        
+        // 页码按钮
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        // 第一页
+        if (startPage > 1) {
+            paginationHTML += `<button onclick="goToPage(1)" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">1</button>`;
+            if (startPage > 2) {
+                paginationHTML += `<span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>`;
+            }
+        }
+        
+        // 页码
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <button onclick="goToPage(${i})" 
+                    class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${i === currentPage 
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}">
+                    ${i}
+                </button>`;
+        }
+        
+        // 最后一页
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                paginationHTML += `<span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>`;
+            }
+            paginationHTML += `<button onclick="goToPage(${totalPages})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">${totalPages}</button>`;
+        }
+        
+        // 下一页按钮
+        paginationHTML += `
+            <button onclick="changePage('next')" ${currentPage >= totalPages ? 'disabled' : ''} 
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage >= totalPages ? 'cursor-not-allowed opacity-50' : ''}">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>`;
+        
+        paginationNav.innerHTML = paginationHTML;
+    }
+
+    // 切换页面
+    function changePage(direction) {
+        if (direction === 'prev' && currentPage > 1) {
+            currentPage--;
+        } else if (direction === 'next' && currentPage < totalPages) {
+            currentPage++;
+        } else {
+            return;
+        }
+        loadVods();
+    }
+
+    // 跳转到指定页面
+    function goToPage(page) {
+        if (page >= 1 && page <= totalPages && page !== currentPage) {
+            currentPage = page;
+            loadVods();
+        }
+    }
+
+    // 打开添加模态框
+    function openAddModal() {
+        isEditing = false;
+        editingId = null;
+        document.getElementById('modalTitle').textContent = '添加视频';
+        document.getElementById('vodForm').reset();
+        document.getElementById('vodModal').classList.remove('hidden');
+    }
+
+    // 编辑视频
+    function editVod(id) {
+        // console.log(vods);
+        const vod = vods.find(v => v._id['$oid'] === id);
+        if (!vod) return;
+
+        isEditing = true;
+        editingId = id;
+        document.getElementById('modalTitle').textContent = '编辑视频';
+
+        // 填充表单数据
+        document.getElementById('vodName').value = vod.vod_name || '';
+        document.getElementById('vodCategory').value = vod.type_id || '';
+        document.getElementById('vodStatus').value = vod.vod_status || 1;
+        document.getElementById('vodPic').value = vod.vod_pic || '';
+        document.getElementById('vodActor').value = vod.vod_actor || '';
+        document.getElementById('vodDirector').value = vod.vod_director || '';
+        document.getElementById('vodArea').value = vod.vod_area || '';
+        document.getElementById('vodYear').value = vod.vod_year || '';
+        document.getElementById('vodLang').value = vod.vod_lang || '';
+        document.getElementById('vodTag').value = vod.vod_class || '';
+        document.getElementById('vodRemarks').value = vod.vod_remarks || '';
+        document.getElementById('vodContent').value = vod.vod_content || '';
+
+        document.getElementById('vodModal').classList.remove('hidden');
+    }
+
+    // 确认删除
+    function confirmDelete(id) {
+        currentDeleteId = id;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    // 删除视频
+    function deleteVod() {
+        if (!currentDeleteId) return;
+
+        fetch(`/api/admin/vods/${currentDeleteId}`, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.code === 1) {
+                    showToast('视频删除成功', 'success');
+                    loadVods(); // 重新加载数据
+                } else {
+                    showToast('删除失败: ' + (data.msg || '未知错误'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting vod:', error);
+                showToast('删除失败', 'error');
+            })
+            .finally(() => {
+                closeDeleteModal();
+            });
+    }
+
+    // 处理表单提交
+    function handleFormSubmit(e) {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const vodData = {
+            vod_name: formData.get('vod_name'),
+            type_id: parseInt(formData.get('type_id')),
+            vod_status: parseInt(formData.get('vod_status')),
+            vod_pic: formData.get('vod_pic') || null,
+            vod_actor: formData.get('vod_actor') || null,
+            vod_director: formData.get('vod_director') || null,
+            vod_area: formData.get('vod_area') || null,
+            vod_year: formData.get('vod_year') || null,
+            vod_lang: formData.get('vod_lang') || null,
+            vod_class: formData.get('vod_tag') || null,
+            vod_remarks: formData.get('vod_remarks') || null,
+            vod_content: formData.get('vod_content') || null
+        };
+
+        const url = isEditing ? `/api/admin/vods/${editingId}` : '/api/admin/vods';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(vodData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.code === 1) {
+                    showToast(isEditing ? '视频更新成功' : '视频添加成功', 'success');
+                    loadVods(); // 重新加载数据
+                    closeModal();
+                } else {
+                    showToast((isEditing ? '更新失败' : '添加失败') + ': ' + (data.msg || '未知错误'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving vod:', error);
+                showToast(isEditing ? '更新失败' : '添加失败', 'error');
+            });
+    }
+
+    // 关闭模态框
+    function closeModal() {
+        document.getElementById('vodModal').classList.add('hidden');
+    }
+
+    // 关闭删除确认模态框
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+        currentDeleteId = null;
+    }
+
+    // 显示 Toast 通知
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+
+        toastMessage.textContent = message;
+
+        // 设置图标和颜色
+        if (type === 'success') {
+            toastIcon.innerHTML = '<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        } else if (type === 'error') {
+            toastIcon.innerHTML = '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        } else {
+            toastIcon.innerHTML = '<svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        }
+
+        toast.classList.remove('hidden');
+
+        // 3秒后自动隐藏
+        setTimeout(() => {
+            hideToast();
+        }, 3000);
+    }
+
+    // 隐藏 Toast 通知
+    function hideToast() {
+        document.getElementById('toast').classList.add('hidden');
+    }
+</script>
+{% endblock %}

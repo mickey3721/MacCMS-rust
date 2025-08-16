@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}</title>
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Icons are implemented as inline SVG -->
+    <style type="text/tailwindcss">
+        @theme {
+            --color-brand: #3b82f6;
+            --color-brand-dark: #1d4ed8;
+            --color-sidebar: #1e293b;
+            --color-sidebar-light: #334155;
+        }
+        
+        .sidebar-collapsed {
+            margin-left: -16rem;
+        }
+        
+        .content-expanded {
+            margin-left: 0;
+        }
+        
+        .sidebar-transition {
+            transition: margin-left 0.3s ease-in-out;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-white transform lg:translate-x-0 lg:static lg:inset-0">
+            <!-- Sidebar Header -->
+            <div class="flex items-center justify-center h-16 bg-sidebar-light border-b border-gray-600">
+                <h1 class="text-xl font-bold text-white">🎬 MacCMS 后台</h1>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="flex-1 px-4 py-6 overflow-y-auto">
+                <nav class="space-y-2">
+                    <!-- Dashboard -->
+                    <a href="/admin" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"/>
+                        </svg>
+                        仪表盘
+                    </a>
+                    
+                    <!-- Category Management -->
+                    <a href="/admin/types" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                        分类管理
+                    </a>
+                    
+                    <!-- Video Management -->
+                    <a href="/admin/vods" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        视频管理
+                    </a>
+                    
+                    <!-- Collection Settings -->
+                    <a href="/admin/collect" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-4H5m14 8H5"/>
+                        </svg>
+                        采集设置
+                    </a>
+                    
+                    <!-- Video Collection Management -->
+                    <a href="/admin/collect_vod" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h4a1 1 0 011 1v2h4a1 1 0 011 1v1a1 1 0 01-1 1v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7a1 1 0 01-1-1V5a1 1 0 011-1h3zM6 7v9h8V7H6zM8 9h4v2H8V9z"/>
+                        </svg>
+                        视频采集
+                    </a>
+                    
+                    <!-- Collection Bindings -->
+                    <a href="/admin/bindings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        </svg>
+                        采集绑定
+                    </a>
+                    
+                    <!-- Website Config -->
+                    <a href="/admin/config" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        网站配置
+                    </a>
+                    
+                    <!-- Database Indexes -->
+                    <a href="/admin/indexes" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-light transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                        </svg>
+                        数据库索引
+                    </a>
+                </nav>
+                
+                <!-- User Section -->
+                <div class="mt-8 pt-6 border-t border-gray-600">
+                    <div class="flex items-center px-4 py-2 text-sm text-gray-300">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        管理员
+                    </div>
+                    <a href="/admin/logout" class="flex items-center px-4 py-3 mt-2 text-sm font-medium rounded-lg hover:bg-red-600 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        退出登录
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden lg:ml-0 sidebar-transition" id="main-content">
+            <!-- Top Navigation Bar -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div class="flex items-center">
+                        <button id="sidebarToggle" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </button>
+                        <h2 class="ml-2 text-xl font-semibold text-gray-800">{% block page_title %}管理后台{% endblock page_title %}</h2>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-500">
+                            {{ now() | date(format="%Y-%m-%d %H:%M") }}
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
+                                <span class="text-sm font-medium text-white">A</span>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700">管理员</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main class="flex-1 overflow-auto bg-gray-50">
+                <div class="p-6 fade-in">
+                    {% block content %}
+                    {% endblock content %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // Sidebar toggle functionality
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const mainContent = document.getElementById('main-content');
+        
+        let sidebarOpen = false;
+
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            
+            if (window.innerWidth < 1024) { // Mobile
+                if (sidebarOpen) {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    sidebarOverlay.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('sidebar-collapsed');
+                    sidebarOverlay.classList.add('hidden');
+                }
+            } else { // Desktop
+                if (sidebarOpen) {
+                    sidebar.classList.add('sidebar-collapsed');
+                    mainContent.classList.add('content-expanded');
+                } else {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    mainContent.classList.remove('content-expanded');
+                }
+            }
+        }
+
+        sidebarToggle.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // Close sidebar on window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 1024 && sidebarOpen) {
+                sidebarOverlay.classList.add('hidden');
+            }
+        });
+
+        // Add active state to current page link
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('nav a[href]');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('bg-brand', 'text-white');
+                    link.classList.remove('hover:bg-sidebar-light');
+                }
+            });
+        });
+
+        // Global notification system
+        window.showNotification = function(message, type = 'info', duration = 3000) {
+            const notification = document.createElement('div');
+            const bgColor = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            }[type] || 'bg-blue-500';
+            
+            notification.className = `fixed top-4 right-4 z-50 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Slide in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Slide out and remove
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, duration);
+        };
+    </script>
+    
+    {% block scripts %}
+    {% endblock scripts %}
+</body>
+</html>

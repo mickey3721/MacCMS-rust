@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category.type_name }} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
+{% block description %}{{ category.type_name }}频道 - 观看最新最全的{{ category.type_name }}视频，包括电影、电视剧、综艺、动漫等{% endblock
+description %}
+{% block keywords %}{{ category.type_name }},在线{{ category.type_name }},免费{{ category.type_name }},高清{{
+category.type_name }}{% endblock keywords %}
+
+{% block head %}
+<style>
+    .filter-sidebar {
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+    }
+
+    .filter-checkbox:checked+label {
+        background-color: #3B82F6;
+        color: white;
+    }
+
+    .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .video-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .filter-sidebar {
+            position: relative;
+            top: 0;
+        }
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="bg-gray-100 py-4">
+    <div class="container mx-auto px-4">
+        <nav class="flex items-center space-x-2 text-sm">
+            <a href="/" class="text-blue-600 hover:text-blue-700">
+                <i class="fas fa-home"></i> 首页
+            </a>
+            <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+            <span class="text-gray-600">{{ category.type_name }}</span>
+        </nav>
+    </div>
+</div>
+
+<!-- Category Header -->
+<section class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
+    <div class="container mx-auto px-4">
+        <div class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">{{ category.type_name }}</h1>
+            <p class="text-lg opacity-90">发现最精彩的{{ category.type_name }}内容</p>
+        </div>
+    </div>
+</section>
+
+<!-- Filter and Content Section -->
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Filter Sidebar -->
+        <aside class="lg:w-64 filter-sidebar">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fas fa-filter mr-2 text-blue-600"></i>
+                    筛选条件
+                </h3>
+
+                <form id="filterForm" method="GET" class="space-y-6">
+                    <!-- Sub-categories -->
+                    {% if sub_categories %}
+                    <div>
+                        <h4 class="font-medium mb-3 text-gray-700">二级分类</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="radio" id="subTypeAll" name="sub_type" value="" {% if not current_sub_type
+                                    %}checked{% endif %} class="filter-checkbox hidden">
+                                <label for="subTypeAll"
+                                    class="flex-1 px-3 py-2 rounded-md border cursor-pointer hover:bg-gray-50 transition-colors text-sm">
+                                    全部
+                                </label>
+                            </div>
+                            {% for sub_cat in sub_categories %}
+                            <div class="flex items-center">
+                                <input type="radio" id="subType{{ sub_cat.type_id }}" name="sub_type"
+                                    value="{{ sub_cat.type_id }}" {% if sub_cat.type_id==current_sub_type %}checked{%
+                                    endif %} class="filter-checkbox hidden">
+                                <label for="subType{{ sub_cat.type_id }}"
+                                    class="flex-1 px-3 py-2 rounded-md border cursor-pointer hover:bg-gray-50 transition-colors text-sm">
+                                    {{ sub_cat.type_name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Area Filter -->
+                    {% if subarea_options %}
+                    <div>
+                        <h4 class="font-medium mb-3 text-gray-700">地区</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="radio" id="areaAll" name="area" value="" {% if not current_area %}checked{%
+                                    endif %} class="filter-checkbox hidden">
+                                <label for="areaAll"
+                                    class="flex-1 px-3 py-2 rounded-md border cursor-pointer hover:bg-gray-50 transition-colors text-sm">
+                                    全部
+                                </label>
+                            </div>
+                            {% for area in subarea_options %}
+                            <div class="flex items-center">
+                                <input type="radio" id="area{{ loop.index }}" name="area" value="{{ area }}" {% if
+                                    current_area==area %}checked{% endif %} class="filter-checkbox hidden">
+                                <label for="area{{ loop.index }}"
+                                    class="flex-1 px-3 py-2 rounded-md border cursor-pointer hover:bg-gray-50 transition-colors text-sm">
+                                    {{ area }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Year Filter -->
+                    {% if subyear_options %}
+                    <div>
+                        <h4 class="font-medium mb-3 text-gray-700">年份</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="radio" id="yearAll" name="year" value="" {% if not current_year %}checked{%
+                                    endif %} class="filter-checkbox hidden">
+                                <label for="yearAll"
+                                    class="flex-1 px-3 py-2 rounded-md border cursor-pointer hover:bg-gray-50 transition-colors text-sm">
+                                    全部
+                                </label>
+                            </div>
+                            {% for year in subyear_options %}
+                            <div class="flex items-center">
+                                <input type="radio" id="year{{ loop.index }}" name="year" value="{{ year }}" {% if
+                                    current_year==year %}checked{% endif %} class="filter-checkbox hidden">
+                                <label for="year{{ loop.index }}"
+                                    class="flex-1 px-3 py-2 rounded-md border cursor-pointer hover:bg-gray-50 transition-colors text-sm">
+                                    {{ year }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-search mr-2"></i>应用筛选
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            <!-- Results Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">搜索结果</h2>
+                    <p class="text-gray-600 text-sm mt-1">共找到 <span class="font-medium text-blue-600">{{ vods | length
+                            }}</span> 个视频</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <select id="sortSelect" onchange="handleSortChange()"
+                        class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">最新发布</option>
+                        <option value="hits" {% if current_sort=="hits" %}selected{% endif %}>最多播放</option>
+                        <option value="score" {% if current_sort=="score" %}selected{% endif %}>最高评分</option>
+                        <option value="year_desc" {% if current_sort=="year_desc" %}selected{% endif %}>年份从新到旧</option>
+                        <option value="year_asc" {% if current_sort=="year_asc" %}selected{% endif %}>年份从旧到新</option>
+                        <option value="name_asc" {% if current_sort=="name_asc" %}selected{% endif %}>名称A-Z</option>
+                        <option value="name_desc" {% if current_sort=="name_desc" %}selected{% endif %}>名称Z-A</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Video Grid -->
+            {% if vods %}
+            <div class="video-grid">
+                {% for vod in vods %}
+                <div class="video-card bg-white rounded-lg shadow-md overflow-hidden">
+                    <a href="/detail/{{ vod._id['$oid'] }}" class="block">
+                        <div class="relative">
+                            <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                                alt="{{ vod.vod_name }}" class="w-full h-64 object-cover" loading="lazy">
+                            <div
+                                class="absolute top-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
+                                {{ vod.vod_remarks | default(value='更新中') }}
+                            </div>
+                            {% if vod.vod_year %}
+                            <div
+                                class="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
+                                {{ vod.vod_year }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-semibold text-gray-800 text-sm mb-2 line-clamp-2">{{ vod.vod_name }}</h3>
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <span>
+                                    {% if vod.vod_pubdate and vod.vod_pubdate['$date'] and
+                                    vod.vod_pubdate['$date']['$numberLong'] %}
+                                    <script>document.write(new Date(parseInt('{{ vod.vod_pubdate["$date"]["$numberLong"] }}')).toLocaleDateString('zh-CN'));</script>
+                                    {% else %}
+                                    08-15
+                                    {% endif %}
+                                </span>
+                                <div class="flex items-center">
+                                    <i class="fas fa-play-circle mr-1"></i>
+                                    <span>播放</span>
+                                </div>
+                            </div>
+                            {% if vod.vod_area %}
+                            <div class="mt-1">
+                                <span class="inline-block bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                                    {{ vod.vod_area }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-16">
+                <div class="text-gray-400">
+                    <i class="fas fa-search text-6xl mb-4"></i>
+                    <p class="text-xl mb-4">没有找到符合条件的视频</p>
+                    <p class="text-gray-500 mb-6">请尝试调整筛选条件或稍后再试</p>
+                    <button
+                        onclick="document.getElementById('filterForm').reset(); document.getElementById('filterForm').submit();"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-redo mr-2"></i>重置筛选
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Pagination -->
+            {% if pagination and pagination.total_pages > 1 %}
+            <nav class="mt-12 flex justify-center">
+                <div class="flex items-center space-x-2">
+                    {% if pagination.current_page > 1 %}
+                    <a href="?pg={{ pagination.current_page - 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}"
+                        class="px-3 py-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+
+                    {% for page in pagination.pages %}
+                    {% if page == pagination.current_page %}
+                    <span class="px-4 py-2 bg-blue-600 text-white rounded-md">{{ page }}</span>
+                    {% else %}
+                    <a href="?pg={{ page }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}"
+                        class="px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
+                        {{ page }}
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if pagination.current_page < pagination.total_pages %} <a
+                        href="?pg={{ pagination.current_page + 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}"
+                        class="px-3 py-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
+                        <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                </div>
+            </nav>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<!-- Mobile Filter Button -->
+<div class="lg:hidden fixed bottom-6 right-6 z-40">
+    <button onclick="toggleMobileFilter()"
+        class="bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+        <i class="fas fa-filter"></i>
+    </button>
+</div>
+
+<!-- Mobile Filter Modal -->
+<div id="mobileFilterModal" class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="fixed right-0 top-0 h-full w-80 bg-white shadow-xl">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold">筛选条件</h3>
+                <button onclick="toggleMobileFilter()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <!-- Mobile filter content would be cloned from desktop sidebar -->
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleMobileFilter() {
+        const modal = document.getElementById('mobileFilterModal');
+        modal.classList.toggle('hidden');
+    }
+
+    // Handle sort change
+    function handleSortChange() {
+        const sortSelect = document.getElementById('sortSelect');
+        const sortValue = sortSelect.value;
+        
+        // Get current URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Update or add sort parameter
+        if (sortValue) {
+            urlParams.set('sort', sortValue);
+        } else {
+            urlParams.delete('sort');
+        }
+        
+        // Keep page 1 when sorting changes
+        urlParams.delete('pg');
+        
+        // Navigate to new URL
+        const newUrl = window.location.pathname + '?' + urlParams.toString();
+        window.location.href = newUrl;
+    }
+
+    // Auto-submit form on filter change
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterForm = document.getElementById('filterForm');
+        const radios = filterForm.querySelectorAll('input[type="radio"]');
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        });
+    });
+</script>
+{% endblock content %}

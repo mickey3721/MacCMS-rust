@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+
+{% block title %}播放 {{ video.vod_name }} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
+{% block description %}正在播放《{{ video.vod_name }}》，支持高清在线观看，多线路播放源选择{% endblock description %}
+{% block keywords %}{{ video.vod_name }},在线播放,免费观看,高清视频{% endblock keywords %}
+
+{% block head %}
+<style>
+    .video-container {
+        position: relative;
+        background: #000;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .video-container video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+    
+    .episode-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .episode-grid {
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 0.25rem;
+        }
+    }
+    
+    .source-tabs {
+        scroll-behavior: smooth;
+    }
+    
+    .source-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .source-tabs::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 2px;
+    }
+    
+    .source-tabs::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 2px;
+    }
+    
+    .loading-spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Fullscreen styles */
+    .video-container:fullscreen {
+        border-radius: 0;
+    }
+    
+    .video-container:-webkit-full-screen {
+        border-radius: 0;
+    }
+    
+    .video-container:-moz-full-screen {
+        border-radius: 0;
+    }
+    
+    .video-container:-ms-fullscreen {
+        border-radius: 0;
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<!-- Video Player Section -->
+<div class="container mx-auto px-4 py-6">
+    <!-- Player Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-4">
+            <a href="/detail/{{ video._id['$oid'] }}" class="text-blue-600 hover:text-blue-700 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>返回详情
+            </a>
+            <h1 class="text-2xl font-bold text-gray-800">{{ video.vod_name }}</h1>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleFavorite()" class="text-red-500 hover:text-red-600 p-2">
+                <i class="far fa-heart text-xl"></i>
+            </button>
+            <button onclick="shareVideo()" class="text-blue-600 hover:text-blue-700 p-2">
+                <i class="fas fa-share-alt text-xl"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Main Player Area -->
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Video Player -->
+        <div class="flex-1">
+            <div class="video-container bg-black rounded-lg overflow-hidden shadow-2xl" style="aspect-ratio: 16/9;">
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 z-10">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <!-- Video Element -->
+                <video id="video-player" 
+                       class="w-full h-full" 
+                       preload="metadata" 
+                       poster="{{ video.vod_pic | default(value='https://via.placeholder.com/1280x720') }}"
+                       controls
+                       playsinline>
+                    <source src="{{ play_url | safe }}" type="application/x-mpegURL">
+                    <p class="text-white text-center p-8">
+                        您的浏览器不支持视频播放。<br>
+                        请使用最新版本的Chrome、Firefox、Safari或Edge浏览器。
+                    </p>
+                </video>
+            </div>
+            
+            <!-- Episode Selection -->
+            {% if video.vod_play_urls and video.vod_play_urls | length > 0 %}
+            <div class="bg-white rounded-lg shadow-md p-4 mt-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">
+                        <i class="fas fa-list mr-2 text-blue-600"></i>选集播放
+                    </h3>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="toggleEpisodeList()" class="text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-chevron-down" id="episode-toggle-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Source Tabs -->
+                <div class="mb-4">
+                    <div class="source-tabs flex space-x-2 overflow-x-auto pb-2 border-b border-gray-200">
+                        {% for source in video.vod_play_urls %}
+                        <button onclick="switchSource({{ loop.index0 }})" 
+                                id="source-tab-{{ loop.index0 }}"
+                                class="source-tab px-3 py-2 rounded-t-lg font-medium transition-all duration-200 whitespace-nowrap text-sm
+                                       {% if loop.first %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                            {{ source.source_name | default(value='线路' ~ loop.index) }}
+                            <span class="ml-1 text-xs">({{ source.urls | length }})</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Episode Lists -->
+                <div id="episode-list-content">
+                    {% for source in video.vod_play_urls %}
+                    {% set source_index = loop.index0 %}
+                    <div id="source-episodes-{{ source_index }}" class="source-episodes {% if not loop.first %}hidden{% endif %}">
+                        {% if source.urls | length > 12 %}
+                        <div class="mb-3 flex items-center justify-between">
+                            <span class="text-sm text-gray-600">共 {{ source.urls | length }} 集</span>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="prevPage({{ source_index }})" class="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50" id="prev-{{ source_index }}">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <span class="text-sm text-gray-600" id="page-info-{{ source_index }}">1-12</span>
+                                <button onclick="nextPage({{ source_index }})" class="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50" id="next-{{ source_index }}">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div id="episodes-grid-{{ source_index }}" class="episode-grid">
+                            {% for url_info in source.urls %}
+                            {% if loop.index0 < 12 %}
+                            <a href="/play/{{ video._id['$oid'] }}/{{ source_index }}-{{ loop.index0 }}" 
+                               class="episode-btn {% if source_index == 0 and loop.index0 == play_index %}bg-blue-600 text-white{% else %}bg-gray-100 hover:bg-blue-600 hover:text-white{% endif %} text-center py-2 px-1 rounded transition-all duration-200 text-xs font-medium">
+                                {{ url_info.name | default(value=loop.index0 + 1) }}
+                            </a>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <aside class="lg:w-80">
+            <!-- Video Info Card -->
+            <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fas fa-info-circle mr-2 text-blue-600"></i>视频信息
+                </h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">地区:</span>
+                        <span class="text-gray-800">{{ video.vod_area | default(value='未知') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">年份:</span>
+                        <span class="text-gray-800">{{ video.vod_year | default(value='未知') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">导演:</span>
+                        <span class="text-gray-800">{{ video.vod_director | default(value='未知') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">主演:</span>
+                        <span class="text-gray-800 text-right">{{ video.vod_actor | default(value='未知') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">状态:</span>
+                        <span class="text-gray-800">{{ video.vod_remarks | default(value='未知') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">更新:</span>
+                        <span class="text-gray-800">{{ vod_pubdate_timestamp | date(format="%Y-%m-%d") }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fas fa-bolt mr-2 text-yellow-500"></i>快捷操作
+                </h3>
+                <div class="space-y-2">
+                    <button onclick="previousEpisode()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded transition-colors">
+                        <i class="fas fa-step-backward mr-2"></i>上一集
+                    </button>
+                    <button onclick="nextEpisode()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition-colors">
+                        <i class="fas fa-step-forward mr-2"></i>下一集
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- HLS.js Library -->
+<script src="/static/js/hls.min.js"></script>
+
+<script>
+    // Global variables
+    let hls = null;
+    let currentSource = 0;
+    let currentEpisode = {{ play_index }};
+    let episodePages = {};
+    
+    // Initialize episode pages
+    {% for source in video.vod_play_urls %}
+    episodePages[{{ loop.index0 }}] = {
+        currentPage: 1,
+        totalPages: Math.ceil({{ source.urls | length }} / 12),
+        episodes: {{ source.urls | length }}
+    };
+    {% endfor %}
+    
+    // Initialize player
+    document.addEventListener('DOMContentLoaded', function() {
+        initPlayer();
+        initKeyboardControls();
+        hideLoadingSpinner();
+    });
+    
+    function initPlayer() {
+        const video = document.getElementById('video-player');
+        const videoSrc = '{{ play_url | safe }}';
+        
+        if (Hls.isSupported()) {
+            hls = new Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: false,
+                backBufferLength: 90,
+                maxMaxBufferLength: 30,
+                maxBufferLength: 30,
+                maxBufferSize: 60 * 1000 * 1000,
+                maxBufferHole: 0.3,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 10,
+                liveDurationInfinity: true,
+                highBufferWatchdogPeriod: 2,
+                nudgeMaxRetry: 3,
+                maxFragLookUpTolerance: 0.25,
+                enableSoftwareAES: true,
+                startLevel: -1,
+                capLevelToPlayerSize: true,
+                abrBandWidthFactor: 0.95,
+                abrMaxWithRealBitrate: false,
+                startFragPrefetch: false
+            });
+            
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                console.log('HLS manifest parsed');
+                video.play().catch(e => console.log('Auto-play prevented:', e));
+            });
+            
+            hls.on(Hls.Events.LEVEL_LOADED, function() {
+                updateQualitySelector();
+            });
+            
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                console.error('HLS error:', data);
+                if (data.fatal) {
+                    switch(data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            showNotification('网络错误，正在重新连接...', 'warning');
+                            setTimeout(() => hls.startLoad(), 1000);
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            showNotification('媒体错误，正在尝试恢复...', 'warning');
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            showNotification('播放出错，请刷新页面重试', 'error');
+                            hls.destroy();
+                            break;
+                    }
+                }
+            });
+            
+            // Video event listeners
+            video.addEventListener('loadedmetadata', function() {
+                console.log('Video metadata loaded');
+            });
+            
+            video.addEventListener('error', function() {
+                showNotification('视频加载失败，请检查网络连接', 'error');
+                hideLoadingSpinner();
+            });
+            
+            video.addEventListener('canplay', hideLoadingSpinner);
+            
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function() {
+                console.log('Video metadata loaded (Safari native)');
+                hideLoadingSpinner();
+            });
+        } else {
+            showNotification('您的浏览器不支持HLS播放，请使用Chrome、Firefox或Safari浏览器', 'error');
+            hideLoadingSpinner();
+        }
+    }
+    
+        
+    function switchSource(sourceIndex) {
+        currentSource = sourceIndex;
+        
+        // Hide all episode lists
+        document.querySelectorAll('.source-episodes').forEach(el => el.classList.add('hidden'));
+        
+        // Remove active state from all tabs
+        document.querySelectorAll('.source-tab').forEach(tab => {
+            tab.classList.remove('bg-blue-600', 'text-white');
+            tab.classList.add('bg-gray-100', 'text-gray-700');
+        });
+        
+        // Show selected source episodes
+        document.getElementById(`source-episodes-${sourceIndex}`).classList.remove('hidden');
+        
+        // Add active state to selected tab
+        const selectedTab = document.getElementById(`source-tab-${sourceIndex}`);
+        selectedTab.classList.remove('bg-gray-100', 'text-gray-700');
+        selectedTab.classList.add('bg-blue-600', 'text-white');
+    }
+    
+    function toggleEpisodeList() {
+        const content = document.getElementById('episode-list-content');
+        const icon = document.getElementById('episode-toggle-icon');
+        
+        content.classList.toggle('hidden');
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
+    }
+    
+    function previousEpisode() {
+        // Navigate to previous episode logic
+        console.log('Previous episode');
+    }
+    
+    function nextEpisode() {
+        // Navigate to next episode logic
+        console.log('Next episode');
+    }
+    
+    function toggleFavorite() {
+        const heart = event.currentTarget.querySelector('i');
+        heart.classList.toggle('far');
+        heart.classList.toggle('fas');
+        showNotification(heart.classList.contains('fas') ? '已添加到收藏' : '已取消收藏', 'success');
+    }
+    
+    function shareVideo() {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ video.vod_name }}',
+                text: '推荐观看《{{ video.vod_name }}》',
+                url: window.location.href
+            });
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            showNotification('链接已复制到剪贴板', 'success');
+        }
+    }
+    
+    function hideLoadingSpinner() {
+        const spinner = document.getElementById('loading-spinner');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
+    
+    function initKeyboardControls() {
+        document.addEventListener('keydown', function(e) {
+            const video = document.getElementById('video-player');
+            
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (video.paused) {
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                    break;
+                case 'ArrowLeft':
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    break;
+                case 'ArrowRight':
+                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                    break;
+                case 'ArrowUp':
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    break;
+                case 'ArrowDown':
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    break;
+                case 'f':
+                    const container = document.querySelector('.video-container');
+                    if (!document.fullscreenElement) {
+                        container.requestFullscreen();
+                    } else {
+                        document.exitFullscreen();
+                    }
+                    break;
+                case 'm':
+                    video.muted = !video.muted;
+                    break;
+            }
+        });
+    }
+    
+    function showNotification(message, type = 'info') {
+        // Reuse the notification function from app.js
+        if (window.showNotification) {
+            window.showNotification(message, type);
+        } else {
+            console.log('Notification:', message);
+        }
+    }
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (hls) {
+            hls.destroy();
+        }
+    });
+</script>
+{% endblock content %}

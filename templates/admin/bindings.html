@@ -1,0 +1,586 @@
+{% extends "admin/base.html" %}
+
+{% block title %}分类绑定管理{% endblock title %}
+
+{% block content %}
+<div class="p-6">
+    <!-- 页面标题 -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">分类绑定管理</h1>
+        <p class="mt-1 text-sm text-gray-600">管理外部API分类与本地分类的映射关系</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">总绑定数</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="total-bindings">{{ bindings | length }}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">活跃源</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="active-sources">{{ bindings | length }}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">未映射分类</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="unmapped-categories">0</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作栏 -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div class="mb-4 sm:mb-0">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">绑定列表</h3>
+                    <p class="mt-1 text-sm text-gray-500">外部API分类与本地分类的映射关系</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="showAddModal()"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        添加绑定
+                    </button>
+                    <form method="post" action="/admin/init-data" class="inline">
+                        <button type="submit"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            初始化测试数据
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索和过滤 -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="search-input" class="block text-sm font-medium text-gray-700 mb-1">搜索绑定</label>
+                    <input type="text" id="search-input" placeholder="搜索绑定ID或分类名称..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="source-filter" class="block text-sm font-medium text-gray-700 mb-1">来源过滤</label>
+                    <select id="source-filter"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">全部来源</option>
+                        <option value="api">API来源</option>
+                        <option value="manual">手动添加</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="category-filter" class="block text-sm font-medium text-gray-700 mb-1">分类过滤</label>
+                    <select id="category-filter"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">全部分类</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 绑定列表 -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        {% if bindings %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">绑定ID
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集源标识
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            外部分类ID</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            本地分类ID</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            本地分类名称</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="bindings-table-body" class="bg-white divide-y divide-gray-200">
+                    {% for binding in bindings %}
+                    <tr id="binding-row-{{ binding.id | default(value="") }}" class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ binding.id |
+                            default(value="-") }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ binding.source_flag |
+                            default(value="-") }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ binding.external_id |
+                            default(value="-") }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ binding.local_type_id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ binding.local_type_name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ binding.created_at |
+                            default(value="-") }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex space-x-2">
+                                <button onclick='editBinding("{{ binding.id | default(value="") }}")'
+                                    class="text-blue-600 hover:text-blue-900">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
+                                <button onclick='deleteBinding("{{ binding.id | default(value="") }}")'
+                                    class="text-red-600 hover:text-red-900">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">暂无绑定数据</h3>
+            <p class="mt-1 text-sm text-gray-500">分类绑定对于正确的内容分类至关重要。点击下方按钮初始化测试绑定或手动添加。</p>
+            <div class="mt-6 flex justify-center space-x-3">
+                <form method="post" action="/admin/init-data" class="inline">
+                    <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        初始化测试数据
+                    </button>
+                </form>
+                <button onclick="showAddModal()"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    添加新绑定
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 添加/编辑绑定模态框 -->
+<div id="binding-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="modal-title" class="text-lg font-medium text-gray-900">添加绑定</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="binding-form">
+                <input type="hidden" id="binding-id" name="binding_id">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">来源标识 *</label>
+                    <input type="text" id="source-flag" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="例如: my_api_source">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">外部分类ID *</label>
+                    <input type="text" id="external-id" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="例如: 123">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">本地分类ID *</label>
+                    <select id="local-type-id" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">请选择本地分类</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        取消
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mt-2">确认删除</h3>
+            <p class="text-sm text-gray-500 mt-1">您确定要删除这个绑定吗？此操作无法撤销。</p>
+            <div class="flex justify-center space-x-3 mt-4">
+                <button onclick="closeDeleteModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    取消
+                </button>
+                <button onclick="confirmDelete()"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 通知 -->
+<div id="toast"
+    class="fixed top-4 right-4 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden hidden">
+    <div class="p-4">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg id="toast-icon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="ml-3 w-0 flex-1 pt-0.5">
+                <p id="toast-message" class="text-sm font-medium text-gray-900"></p>
+            </div>
+            <div class="ml-4 flex-shrink-0 flex">
+                <button onclick="hideToast()"
+                    class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 全局变量
+    var bindings = {{ bindings | json_encode() | safe }};
+    var types = [];
+    var currentDeleteId = null;
+    var isEditing = false;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTypes();
+        setupEventListeners();
+        updateStats();
+    });
+
+    // 设置事件监听器
+    function setupEventListeners() {
+        // 表单提交
+        document.getElementById('binding-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            saveBinding();
+        });
+
+        // 搜索输入
+        document.getElementById('search-input').addEventListener('input', function () {
+            filterBindings();
+        });
+
+        // 过滤器
+        document.getElementById('source-filter').addEventListener('change', function () {
+            filterBindings();
+        });
+
+        document.getElementById('category-filter').addEventListener('change', function () {
+            filterBindings();
+        });
+    }
+
+    // 加载分类数据
+    function loadTypes() {
+        fetch('/api/admin/types')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                types = data;
+                populateTypeSelects();
+            })
+            .catch(function (error) {
+                console.error('加载分类失败:', error);
+                showToast('加载分类失败', 'error');
+            });
+    }
+
+    // 填充分类选择框
+    function populateTypeSelects() {
+        var localTypeSelect = document.getElementById('local-type-id');
+        var categoryFilter = document.getElementById('category-filter');
+
+        // 清空现有选项
+        localTypeSelect.innerHTML = '<option value="">请选择本地分类</option>';
+        categoryFilter.innerHTML = '<option value="">全部分类</option>';
+
+        types.forEach(function (type) {
+            var option1 = document.createElement('option');
+            option1.value = type.type_id;
+            option1.textContent = type.type_name;
+            localTypeSelect.appendChild(option1);
+
+            var option2 = document.createElement('option');
+            option2.value = type.type_id;
+            option2.textContent = type.type_name;
+            categoryFilter.appendChild(option2);
+        });
+    }
+
+    // 更新统计数据
+    function updateStats() {
+        document.getElementById('total-bindings').textContent = bindings.length;
+        document.getElementById('active-sources').textContent = bindings.length;
+    }
+
+    // 显示添加模态框
+    function showAddModal() {
+        isEditing = false;
+        document.getElementById('modal-title').textContent = '添加绑定';
+        document.getElementById('binding-form').reset();
+        document.getElementById('binding-id').value = '';
+        document.getElementById('binding-modal').classList.remove('hidden');
+    }
+
+    // 编辑绑定
+function editBinding(id) {
+    var binding = bindings.find(function(b) { return b.id === id; });
+    if (!binding) {
+        showToast('绑定不存在', 'error');
+        return;
+    }
+    
+    isEditing = true;
+    document.getElementById('modal-title').textContent = '编辑绑定';
+    document.getElementById('binding-id').value = id;
+    
+    // 使用新的字段结构
+    document.getElementById('source-flag').value = binding.source_flag || '';
+    document.getElementById('external-id').value = binding.external_id || '';
+    document.getElementById('local-type-id').value = binding.local_type_id;
+    
+    document.getElementById('binding-modal').classList.remove('hidden');
+}
+
+    // 删除绑定
+    function deleteBinding(id) {
+        currentDeleteId = id;
+        document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    // 确认删除
+    function confirmDelete() {
+        if (!currentDeleteId) return;
+
+        fetch('/api/admin/bindings/' + currentDeleteId, {
+            method: 'DELETE'
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    // 从数组中移除
+                    bindings = bindings.filter(function (b) { return b.id !== currentDeleteId; });
+
+                    // 移除表格行
+                    var row = document.getElementById('binding-row-' + currentDeleteId);
+                    if (row) {
+                        row.remove();
+                    }
+
+                    updateStats();
+                    showToast('绑定删除成功', 'success');
+                } else {
+                    showToast('删除失败', 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('删除失败:', error);
+                showToast('删除失败', 'error');
+            })
+            .finally(function () {
+                closeDeleteModal();
+            });
+    }
+
+    // 保存绑定
+    function saveBinding() {
+        var sourceFlag = document.getElementById('source-flag').value;
+        var externalId = document.getElementById('external-id').value;
+        var localTypeId = parseInt(document.getElementById('local-type-id').value);
+
+        if (!sourceFlag || !externalId || !localTypeId) {
+            showToast('请填写所有必填字段', 'error');
+            return;
+        }
+
+        var data = {
+            source_flag: sourceFlag,
+            external_id: externalId,
+            local_type_id: localTypeId
+        };
+
+        fetch('/api/admin/bindings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    showToast(isEditing ? '绑定更新成功' : '绑定创建成功', 'success');
+                    closeModal();
+                    // 重新加载页面数据
+                    setTimeout(function () {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showToast('保存失败', 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('保存失败:', error);
+                showToast('保存失败', 'error');
+            });
+    }
+
+    // 过滤绑定
+    function filterBindings() {
+        var searchTerm = document.getElementById('search-input').value.toLowerCase();
+        var sourceFilter = document.getElementById('source-filter').value;
+        var categoryFilter = document.getElementById('category-filter').value;
+
+        var rows = document.querySelectorAll('#bindings-table-body tr');
+
+        rows.forEach(function (row) {
+            var bindingId = row.cells[0].textContent.toLowerCase();
+            var sourceFlag = row.cells[1].textContent.toLowerCase();
+            var externalId = row.cells[2].textContent.toLowerCase();
+            var categoryName = row.cells[4].textContent.toLowerCase();
+            var categoryId = row.cells[3].textContent;
+
+            var matchesSearch = bindingId.includes(searchTerm) || categoryName.includes(searchTerm) || sourceFlag.includes(searchTerm) || externalId.includes(searchTerm);
+            var matchesSource = !sourceFilter || sourceFlag.includes(sourceFilter);
+            var matchesCategory = !categoryFilter || categoryId === categoryFilter;
+
+            if (matchesSearch && matchesSource && matchesCategory) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // 关闭模态框
+    function closeModal() {
+        document.getElementById('binding-modal').classList.add('hidden');
+    }
+
+    // 关闭删除模态框
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+        currentDeleteId = null;
+    }
+
+    // 显示Toast通知
+    function showToast(message, type) {
+        var toast = document.getElementById('toast');
+        var icon = document.getElementById('toast-icon');
+        var messageEl = document.getElementById('toast-message');
+
+        messageEl.textContent = message;
+
+        // 设置图标和颜色
+        if (type === 'success') {
+            icon.className = 'h-6 w-6 text-green-400';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />';
+        } else {
+            icon.className = 'h-6 w-6 text-red-400';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />';
+        }
+
+        toast.classList.remove('hidden');
+
+        // 3秒后自动隐藏
+        setTimeout(function () {
+            hideToast();
+        }, 3000);
+    }
+
+    // 隐藏Toast通知
+    function hideToast() {
+        document.getElementById('toast').classList.add('hidden');
+    }
+</script>
+{% endblock content %}

@@ -1,0 +1,1176 @@
+{% extends "admin/base.html" %}
+
+{% block title %}采集管理{% endblock title %}
+
+{% block content %}
+<!-- 页面标题 -->
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">采集管理</h1>
+    <button onclick="openAddModal()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        <span>添加采集源</span>
+    </button>
+</div>
+
+<!-- 统计卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-2 bg-blue-100 rounded-lg">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                    </path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">总采集源</p>
+                <p class="text-2xl font-semibold text-gray-900" id="total-sources">{{ collections | length }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-2 bg-green-100 rounded-lg">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">活跃源</p>
+                <p class="text-2xl font-semibold text-gray-900" id="active-sources">0</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-2 bg-yellow-100 rounded-lg">
+                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">运行中任务</p>
+                <p class="text-2xl font-semibold text-gray-900" id="running-tasks">0</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-2 bg-purple-100 rounded-lg">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">今日采集</p>
+                <p class="text-2xl font-semibold text-gray-900" id="today-collected">0</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 搜索和过滤 -->
+<div class="bg-white rounded-lg shadow mb-6">
+    <div class="p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            <div class="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="搜索采集源..."
+                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <select id="status-filter"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">全部状态</option>
+                    <option value="1">活跃</option>
+                    <option value="0">停用</option>
+                </select>
+
+                <select id="type-filter"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">全部类型</option>
+                    <option value="1">API</option>
+                    <option value="2">RSS</option>
+                </select>
+            </div>
+
+            <button onclick="refreshData()"
+                class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
+                </svg>
+                <span>刷新</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 采集源列表 -->
+<div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">采集源列表</h3>
+    </div>
+
+    <div class="overflow-x-auto">
+        {% if collections %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">更新时间</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="collections-table">
+                {% for collection in collections %}
+                <tr class="hover:bg-gray-50" data-id="{{ collection.id | default(value="") }}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ collection.collect_name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="{{ collection.collect_url }}" target="_blank"
+                            class="text-blue-600 hover:text-blue-800 text-sm">
+                            {{ collection.collect_url | truncate(length=50) }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if collection.collect_type == 1 %}
+                        <span
+                            class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">API</span>
+                        {% elif collection.collect_type == 2 %}
+                        <span
+                            class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">RSS</span>
+                        {% else %}
+                        <span
+                            class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">其他</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if collection.collect_status == 1 %}
+                        <span
+                            class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">活跃</span>
+                        {% else %}
+                        <span
+                            class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">停用</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if collection.updated_at and collection.updated_at['$date'] and
+                        collection.updated_at['$date']['$numberLong'] %}
+                        <script>document.write(new Date(parseInt('{{ collection.updated_at["$date"]["$numberLong"] }}')).toLocaleDateString());</script>
+                        {% else %}
+                        未知
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex flex-wrap gap-1">
+                            <!-- 采集选项下拉菜单 -->
+                            <div class="relative group">
+                                <button
+                                    class="text-green-600 hover:text-green-800 px-2 py-1 rounded border border-green-600 hover:bg-green-50 flex items-center">
+                                    采集
+                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                                <div
+                                    class="absolute left-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                    <div class="py-1">
+                                        <button data-collection-id="{{ collection._id['$oid'] }}" data-hours="24"
+                                            onclick="collectWithHours(this.dataset.collectionId, this.dataset.hours)"
+                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            采集当天
+                                        </button>
+                                        <button data-collection-id="{{ collection._id['$oid'] }}" data-hours="168"
+                                            onclick="collectWithHours(this.dataset.collectionId, this.dataset.hours)"
+                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            采集本周
+                                        </button>
+                                        <button data-collection-id="{{ collection._id['$oid'] }}" data-hours=""
+                                            onclick="collectWithHours(this.dataset.collectionId, this.dataset.hours)"
+                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            采集全部
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button data-collection-id="{{ collection._id['$oid'] }}"
+                                onclick="testCollection(this.dataset.collectionId)"
+                                class="text-blue-600 hover:text-blue-800 px-2 py-1 rounded border border-blue-600 hover:bg-blue-50">
+                                测试
+                            </button>
+                            <button data-collection-id="{{ collection._id['$oid'] }}"
+                                onclick="editCollection(this.dataset.collectionId)"
+                                class="text-yellow-600 hover:text-yellow-800 px-2 py-1 rounded border border-yellow-600 hover:bg-yellow-50">
+                                编辑
+                            </button>
+                            <button data-collection-id="{{ collection._id['$oid'] }}"
+                                onclick="deleteCollection(this.dataset.collectionId)"
+                                class="text-red-600 hover:text-red-800 px-2 py-1 rounded border border-red-600 hover:bg-red-50">
+                                删除
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                </path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">暂无采集源</h3>
+            <p class="mt-1 text-sm text-gray-500">点击下方按钮初始化测试数据或手动添加采集源。</p>
+            <div class="mt-6 space-x-4">
+                <form method="post" action="/admin/init-data" class="inline">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        初始化测试数据
+                    </button>
+                </form>
+                <button onclick="openAddModal()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                    添加采集源
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 采集任务状态 -->
+<div class="bg-white rounded-lg shadow mt-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium text-gray-900">运行中的采集任务</h3>
+            <div class="flex items-center space-x-2">
+                <div class="flex items-center">
+                    <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                    <span class="text-sm text-gray-600">实时更新</span>
+                </div>
+                <button onclick="toggleTaskAutoRefresh()" id="auto-refresh-btn"
+                    class="text-sm bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded">
+                    自动刷新: 开启
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="p-6">
+        <div id="running-tasks-container">
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-gray-500">暂无运行中的采集任务</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务日志模态框 -->
+<div id="task-log-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">任务日志</h3>
+            <button onclick="closeTaskLogModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto"
+            id="task-log-content">
+            <div class="text-gray-500">加载日志中...</div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button onclick="closeTaskLogModal()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                关闭
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑采集源模态框 -->
+<div id="collection-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900" id="modal-title">添加采集源</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="collection-form" class="space-y-4">
+                <input type="hidden" id="collection-id">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="collect-name" class="block text-sm font-medium text-gray-700 mb-1">采集源名称</label>
+                        <input type="text" id="collect-name" name="collect_name" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="collect-type" class="block text-sm font-medium text-gray-700 mb-1">采集类型</label>
+                        <select id="collect-type" name="collect_type" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="1">API</option>
+                            <option value="2">RSS</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="collect-url" class="block text-sm font-medium text-gray-700 mb-1">采集URL</label>
+                    <input type="url" id="collect-url" name="collect_url" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="collect-appid" class="block text-sm font-medium text-gray-700 mb-1">应用ID</label>
+                        <input type="text" id="collect-appid" name="collect_appid"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="collect-appkey" class="block text-sm font-medium text-gray-700 mb-1">应用密钥</label>
+                        <input type="text" id="collect-appkey" name="collect_appkey"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="collect-param" class="block text-sm font-medium text-gray-700 mb-1">采集参数</label>
+                    <input type="text" id="collect-param" name="collect_param" placeholder="例如: ac=videolist"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="collect-mid" class="block text-sm font-medium text-gray-700 mb-1">模型ID</label>
+                        <input type="number" id="collect-mid" name="collect_mid" value="1"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="collect-sync-pic" class="block text-sm font-medium text-gray-700 mb-1">同步图片</label>
+                        <select id="collect-sync-pic" name="collect_sync_pic_opt"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="0">否</option>
+                            <option value="1">是</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="collect-status" class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                        <select id="collect-status" name="collect_status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="1">启用</option>
+                            <option value="0">禁用</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="collect-filter" class="block text-sm font-medium text-gray-700 mb-1">过滤规则</label>
+                    <textarea id="collect-filter" name="collect_filter" rows="3" placeholder="过滤规则，一行一个"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div>
+                    <label for="collect-filter-from" class="block text-sm font-medium text-gray-700 mb-1">播放源过滤</label>
+                    <input type="text" id="collect-filter-from" name="collect_filter_from"
+                        placeholder="例如: wjm3u8,ckm3u8"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="collect-opt" class="block text-sm font-medium text-gray-700 mb-1">采集选项</label>
+                        <select id="collect-opt" name="collect_opt"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="0">全部</option>
+                            <option value="1">今日更新</option>
+                            <option value="2">昨日更新</option>
+                            <option value="3">本周更新</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="collect-remove-ad" class="block text-sm font-medium text-gray-700 mb-1">移除广告</label>
+                        <select id="collect-remove-ad" name="collect_remove_ad"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="0">否</option>
+                            <option value="1">是</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="collect-convert-webp"
+                            class="block text-sm font-medium text-gray-700 mb-1">WebP转换</label>
+                        <select id="collect-convert-webp" name="collect_convert_webp"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="0">禁用</option>
+                            <option value="1">启用</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="collect-download-retry"
+                            class="block text-sm font-medium text-gray-700 mb-1">下载重试次数</label>
+                        <input type="number" id="collect-download-retry" name="collect_download_retry" value="3" min="0"
+                            max="10"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        取消
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
+                    </path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mt-2">确认删除</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">确定要删除这个采集源吗？此操作无法撤销。</p>
+            </div>
+            <div class="flex justify-center space-x-3 mt-4">
+                <button onclick="closeDeleteModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    取消
+                </button>
+                <button onclick="confirmDelete()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                    删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 通知 -->
+<div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hidden">
+    <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+        </svg>
+        <span id="toast-message">操作成功</span>
+    </div>
+</div>
+
+<script>
+    // 全局变量
+    var collections = JSON.parse('{{ collections | json_encode() | safe }}');
+    var currentDeleteId = null;
+    var isEditing = false;
+    var taskAutoRefresh = true;
+    var taskRefreshInterval = null;
+    var runningTasks = new Map(); // 存储运行中的任务
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        updateStats();
+        setupEventListeners();
+        startTaskMonitoring();
+    });
+
+    // 设置事件监听器
+    function setupEventListeners() {
+        // 搜索功能
+        document.getElementById('search-input').addEventListener('input', filterCollections);
+        document.getElementById('status-filter').addEventListener('change', filterCollections);
+        document.getElementById('type-filter').addEventListener('change', filterCollections);
+
+        // 表单提交
+        document.getElementById('collection-form').addEventListener('submit', handleFormSubmit);
+    }
+
+    // 更新统计数据
+    function updateStats() {
+        var totalSources = collections.length;
+        var activeSources = collections.filter(function (c) { return c.collect_status === 1; }).length;
+
+        document.getElementById('total-sources').textContent = totalSources;
+        document.getElementById('active-sources').textContent = activeSources;
+    }
+
+    // 过滤采集源
+    function filterCollections() {
+        var searchTerm = document.getElementById('search-input').value.toLowerCase();
+        var statusFilter = document.getElementById('status-filter').value;
+        var typeFilter = document.getElementById('type-filter').value;
+
+        var rows = document.querySelectorAll('#collections-table tr');
+
+        rows.forEach(function (row) {
+            var name = row.querySelector('td:first-child').textContent.toLowerCase();
+            var status = row.dataset.status;
+            var type = row.dataset.type;
+
+            var matchesSearch = name.includes(searchTerm);
+            var matchesStatus = !statusFilter || status === statusFilter;
+            var matchesType = !typeFilter || type === typeFilter;
+
+            if (matchesSearch && matchesStatus && matchesType) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // 打开添加模态框
+    function openAddModal() {
+        isEditing = false;
+        document.getElementById('modal-title').textContent = '添加采集源';
+        document.getElementById('collection-form').reset();
+        document.getElementById('collection-id').value = '';
+        document.getElementById('collection-modal').classList.remove('hidden');
+    }
+
+    // 编辑采集源
+    function editCollection(id) {
+        isEditing = true;
+        var collection = collections.find(function (c) { return c._id['$oid'] === id; });
+
+        if (!collection) {
+            showToast('采集源不存在', 'error');
+            return;
+        }
+
+        document.getElementById('modal-title').textContent = '编辑采集源';
+        document.getElementById('collection-id').value = id;
+        document.getElementById('collect-name').value = collection.collect_name || '';
+        document.getElementById('collect-url').value = collection.collect_url || '';
+        document.getElementById('collect-type').value = collection.collect_type || 1;
+        document.getElementById('collect-appid').value = collection.collect_appid || '';
+        document.getElementById('collect-appkey').value = collection.collect_appkey || '';
+        document.getElementById('collect-param').value = collection.collect_param || '';
+        document.getElementById('collect-mid').value = collection.collect_mid || 1;
+        document.getElementById('collect-sync-pic').value = collection.collect_sync_pic_opt || 0;
+        document.getElementById('collect-status').value = collection.collect_status || 1;
+        document.getElementById('collect-filter').value = collection.collect_filter || '';
+        document.getElementById('collect-filter-from').value = collection.collect_filter_from || '';
+        document.getElementById('collect-opt').value = collection.collect_opt || 0;
+        document.getElementById('collect-remove-ad').value = collection.collect_remove_ad || 0;
+        document.getElementById('collect-convert-webp').value = collection.collect_convert_webp || 0;
+        document.getElementById('collect-download-retry').value = collection.collect_download_retry || 3;
+
+        document.getElementById('collection-modal').classList.remove('hidden');
+    }
+
+    // 删除采集源
+    function deleteCollection(id) {
+        currentDeleteId = id;
+        document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    // 测试采集源
+    function testCollection(id) {
+        var collection = collections.find(function (c) { return c._id['$oid'] === id; });
+        if (!collection) {
+            showToast('采集源不存在', 'error');
+            return;
+        }
+
+        showToast('正在测试采集源连接...', 'info');
+
+        // 使用获取分类接口来测试采集源
+        var testUrl = collection.collect_url;
+        if (!testUrl) {
+            showToast('采集源URL为空', 'error');
+            return;
+        }
+
+        // 确保URL包含协议
+        if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+            testUrl = 'https://' + testUrl;
+        }
+
+        fetch('/api/collect/categories?url=' + encodeURIComponent(testUrl), {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                if (data.success && data.categories && data.categories.length > 0) {
+                    showToast('测试成功，请先绑定分类。共获取到 ' + data.categories.length + ' 个分类', 'success');
+                } else {
+                    showToast('采集源测试失败：' + (data.message || '无法获取分类数据'), 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('测试请求失败：' + error.message, 'error');
+            });
+    }
+
+    // 立即采集（旧版本，保留兼容性）
+    function collectNow(id) {
+        collectWithHours(id, '');
+    }
+
+    // 带时间范围的采集
+    function collectWithHours(id, hours) {
+        var hoursText = hours === '24' ? '当天' : hours === '168' ? '本周' : '全部';
+
+        // 先检查绑定状态
+        showToast('正在检查分类绑定状态...', 'info');
+
+        fetch('/api/admin/collections/' + id + '/binding-status', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('检查绑定状态失败');
+                }
+            })
+            .then(function (bindingData) {
+                if (!bindingData.has_bindings) {
+                    showToast('请先绑定分类', 'error');
+                    // 可选：跳转到绑定页面
+                    // window.location.href = '/admin/bindings';
+                    return;
+                }
+
+                // 有绑定分类，继续采集流程
+                if (!confirm('确定要采集' + hoursText + '的数据吗？')) {
+                    return;
+                }
+
+                showToast('正在启动采集任务...', 'info');
+
+                fetch('/api/admin/collections/' + id + '/collect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        hours: hours ? parseInt(hours) : null
+                    })
+                })
+                    .then(function (response) {
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            throw new Error('启动采集任务失败');
+                        }
+                    })
+                    .then(function (data) {
+                        if (data.success) {
+                            showToast('采集任务已启动：' + (data.message || ''), 'success');
+                            // 添加任务到监控
+                            if (data.task_id) {
+                                var collection = collections.find(function (c) { return c._id['$oid'] === id; });
+                                var collectionName = collection ? collection.collect_name : '未知采集源';
+                                addTaskToMonitor(data.task_id, collectionName);
+                            }
+                            // 如果是批量采集，显示进度
+                            if (data.task_id && data.total_pages > 1) {
+                                showCollectProgress(data.task_id, data.total_pages);
+                            }
+                        } else {
+                            if (data.needs_binding) {
+                                showToast('请先绑定分类', 'error');
+                            } else {
+                                showToast(data.message || '启动采集任务失败', 'error');
+                            }
+                        }
+                    })
+                    .catch(function (error) {
+                        console.error('Error:', error);
+                        showToast(error.message || '采集请求失败', 'error');
+                    });
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('检查绑定状态失败：' + error.message, 'error');
+            });
+    }
+
+    // 显示采集进度
+    function showCollectProgress(taskId, totalPages) {
+        var progressModal = document.createElement('div');
+        progressModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+        progressModal.innerHTML = `
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <h3 class="text-lg font-medium text-gray-900">采集进度</h3>
+                    <div class="mt-4">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="progress-text" class="mt-2 text-sm text-gray-600">准备开始...</p>
+                    </div>
+                    <div class="mt-4">
+                        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                            关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(progressModal);
+
+        // 轮询进度
+        pollCollectProgress(taskId, totalPages);
+    }
+
+    // 轮询采集进度
+    function pollCollectProgress(taskId, totalPages) {
+        var interval = setInterval(function () {
+            fetch('/api/admin/collect/progress/' + taskId)
+                .then(function (response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('获取进度失败');
+                    }
+                })
+                .then(function (data) {
+                    if (data.success) {
+                        var progress = data.progress;
+                        var percentage = (progress.current_page / totalPages) * 100;
+                        document.getElementById('progress-bar').style.width = percentage + '%';
+                        document.getElementById('progress-text').textContent =
+                            `第 ${progress.current_page}/${totalPages} 页，成功: ${progress.success}，失败: ${progress.failed}`;
+
+                        if (progress.status === 'completed' || progress.status === 'failed') {
+                            clearInterval(interval);
+                            showToast(progress.status === 'completed' ? '采集完成' : '采集失败',
+                                progress.status === 'completed' ? 'success' : 'error');
+                        }
+                    }
+                })
+                .catch(function (error) {
+                    console.error('Error:', error);
+                    clearInterval(interval);
+                });
+        }, 1000);
+    }
+
+    // 处理表单提交
+    function handleFormSubmit(e) {
+        e.preventDefault();
+
+        var formData = new FormData(e.target);
+        var data = {};
+
+        for (var pair of formData.entries()) {
+            var value = pair[1];
+            if (pair[0] === 'collect_type' || pair[0] === 'collect_mid' ||
+                pair[0] === 'collect_sync_pic_opt' || pair[0] === 'collect_status' ||
+                pair[0] === 'collect_opt' || pair[0] === 'collect_remove_ad' ||
+                pair[0] === 'collect_convert_webp' || pair[0] === 'collect_download_retry') {
+                data[pair[0]] = parseInt(value);
+            } else {
+                data[pair[0]] = value;
+            }
+        }
+
+        var url = isEditing ?
+            '/api/admin/collections/' + document.getElementById('collection-id').value :
+            '/api/admin/collections';
+
+        var method = isEditing ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return response.json().then(function (data) {
+                        throw new Error(data.message || (isEditing ? '更新失败' : '创建失败'));
+                    });
+                }
+            })
+            .then(function (data) {
+                showToast(data.message || (isEditing ? '采集源更新成功' : '采集源创建成功'), 'success');
+                closeModal();
+                setTimeout(function () {
+                    location.reload();
+                }, 1000);
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast(error.message || '请求失败', 'error');
+            });
+    }
+
+    // 确认删除
+    function confirmDelete() {
+        if (!currentDeleteId) return;
+
+        fetch('/api/admin/collections/' + currentDeleteId, {
+            method: 'DELETE'
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return response.json().then(function (data) {
+                        throw new Error(data.message || '删除失败');
+                    });
+                }
+            })
+            .then(function (data) {
+                showToast(data.message || '采集源删除成功', 'success');
+                closeDeleteModal();
+                setTimeout(function () {
+                    location.reload();
+                }, 1000);
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast(error.message || '删除请求失败', 'error');
+            });
+    }
+
+    // 关闭模态框
+    function closeModal() {
+        document.getElementById('collection-modal').classList.add('hidden');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+        currentDeleteId = null;
+    }
+
+    // 刷新数据
+    function refreshData() {
+        location.reload();
+    }
+
+    // 显示Toast通知
+    function showToast(message, type) {
+        var toast = document.getElementById('toast');
+        var messageEl = document.getElementById('toast-message');
+
+        messageEl.textContent = message;
+
+        // 设置颜色
+        toast.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg';
+        if (type === 'success') {
+            toast.classList.add('bg-green-500', 'text-white');
+        } else if (type === 'error') {
+            toast.classList.add('bg-red-500', 'text-white');
+        } else {
+            toast.classList.add('bg-blue-500', 'text-white');
+        }
+
+        toast.classList.remove('hidden');
+
+        setTimeout(function () {
+            toast.classList.add('hidden');
+        }, 3000);
+    }
+
+    // 任务监控相关函数
+    function startTaskMonitoring() {
+        if (taskAutoRefresh) {
+            // 立即获取一次任务状态
+            fetchRunningTasks();
+            // 设置定时刷新
+            taskRefreshInterval = setInterval(fetchRunningTasks, 3000); // 每3秒刷新一次
+        }
+    }
+
+    function stopTaskMonitoring() {
+        if (taskRefreshInterval) {
+            clearInterval(taskRefreshInterval);
+            taskRefreshInterval = null;
+        }
+    }
+
+    function toggleTaskAutoRefresh() {
+        taskAutoRefresh = !taskAutoRefresh;
+        var btn = document.getElementById('auto-refresh-btn');
+
+        if (taskAutoRefresh) {
+            btn.textContent = '自动刷新: 开启';
+            btn.className = 'text-sm bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded';
+            startTaskMonitoring();
+        } else {
+            btn.textContent = '自动刷新: 关闭';
+            btn.className = 'text-sm bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded';
+            stopTaskMonitoring();
+        }
+    }
+
+    function fetchRunningTasks() {
+        // 这里需要调用新的API获取所有运行中的任务
+        // 暂时模拟一些任务数据
+        fetchRunningTasksFromAPI();
+    }
+
+    function fetchRunningTasksFromAPI() {
+        fetch('/api/admin/running-tasks', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('获取任务列表失败');
+                }
+            })
+            .then(function (data) {
+                if (data.success) {
+                    updateRunningTasksDisplay(data.tasks);
+                    updateTaskStats(data.tasks);
+                } else {
+                    console.error('获取任务列表失败:', data.message);
+                    // 如果API不存在，使用空数组
+                    updateRunningTasksDisplay([]);
+                    updateTaskStats([]);
+                }
+            })
+            .catch(function (error) {
+                console.error('获取任务列表出错:', error);
+                // 如果API不存在，使用空数组
+                updateRunningTasksDisplay([]);
+                updateTaskStats([]);
+            });
+    }
+
+    function updateRunningTasksDisplay(tasks) {
+        var container = document.getElementById('running-tasks-container');
+
+        if (!tasks || tasks.length === 0) {
+            container.innerHTML = `
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-gray-500">暂无运行中的采集任务</p>
+                </div>
+            `;
+            return;
+        }
+
+        var tasksHtml = '<div class="space-y-4">';
+        tasks.forEach(function (task) {
+            var progressPercentage = task.total_pages > 0 ? (task.current_page / task.total_pages * 100) : 0;
+            var statusClass = task.status === 'running' ? 'bg-blue-100 text-blue-800' :
+                task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    'bg-red-100 text-red-800';
+            var statusText = task.status === 'running' ? '运行中' :
+                task.status === 'completed' ? '已完成' : '失败';
+
+            tasksHtml += `
+                <div class="border border-gray-200 rounded-lg p-4" id="task-${task.task_id}">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-3 h-3 rounded-full ${task.status === 'running' ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}"></div>
+                            <h4 class="font-medium text-gray-900">${task.collection_name || '未知采集源'}</h4>
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                                ${statusText}
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="showTaskLog('${task.task_id}')" class="text-blue-600 hover:text-blue-800 text-sm">
+                                查看日志
+                            </button>
+                            ${task.status === 'running' ? `
+                                <button onclick="stopTask('${task.task_id}')" class="text-red-600 hover:text-red-800 text-sm">
+                                    停止
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                            <span>进度: ${task.current_page}/${task.total_pages} 页</span>
+                            <span>${progressPercentage.toFixed(1)}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progressPercentage}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">成功:</span>
+                            <span class="font-medium text-green-600">${task.success}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">失败:</span>
+                            <span class="font-medium text-red-600">${task.failed}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">开始时间:</span>
+                            <span class="font-medium">${task.start_time || '未知'}</span>
+                        </div>
+                    </div>
+                    
+                    ${task.log ? `
+                        <div class="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600 font-mono">
+                            ${task.log}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        tasksHtml += '</div>';
+        container.innerHTML = tasksHtml;
+    }
+
+    function updateTaskStats(tasks) {
+        var runningCount = tasks ? tasks.filter(function (t) { return t.status === 'running'; }).length : 0;
+        document.getElementById('running-tasks').textContent = runningCount;
+    }
+
+    function showTaskLog(taskId) {
+        var modal = document.getElementById('task-log-modal');
+        var logContent = document.getElementById('task-log-content');
+
+        modal.classList.remove('hidden');
+        logContent.innerHTML = '<div class="text-gray-500">加载日志中...</div>';
+
+        // 获取任务详情以显示日志
+        fetch('/api/admin/collect/progress/' + taskId, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('获取任务日志失败');
+                }
+            })
+            .then(function (data) {
+                if (data.success) {
+                    var progress = data.progress;
+                    var logHtml = `
+                    <div class="text-green-400">任务ID: ${taskId}</div>
+                    <div class="text-blue-400">状态: ${progress.status}</div>
+                    <div class="text-yellow-400">进度: ${progress.current_page}/${progress.total_pages}</div>
+                    <div class="text-green-400">成功: ${progress.success}</div>
+                    <div class="text-red-400">失败: ${progress.failed}</div>
+                    <div class="text-gray-400 mt-2">日志:</div>
+                    <div class="text-white mt-1">${progress.log || '暂无日志'}</div>
+                `;
+                    logContent.innerHTML = logHtml;
+                } else {
+                    logContent.innerHTML = '<div class="text-red-400">获取日志失败: ' + (data.message || '未知错误') + '</div>';
+                }
+            })
+            .catch(function (error) {
+                console.error('获取任务日志出错:', error);
+                logContent.innerHTML = '<div class="text-red-400">获取日志失败: ' + error.message + '</div>';
+            });
+    }
+
+    function closeTaskLogModal() {
+        document.getElementById('task-log-modal').classList.add('hidden');
+    }
+
+    function stopTask(taskId) {
+        if (!confirm('确定要停止这个采集任务吗？')) {
+            return;
+        }
+
+        // 这里应该调用停止任务的API
+        showToast('正在停止任务...', 'info');
+
+        // 暂时模拟停止任务
+        setTimeout(function () {
+            showToast('任务已停止', 'success');
+            // 刷新任务列表
+            fetchRunningTasks();
+        }, 1000);
+    }
+
+    // 在采集任务启动后添加到监控列表
+    function addTaskToMonitor(taskId, collectionName) {
+        runningTasks.set(taskId, {
+            task_id: taskId,
+            collection_name: collectionName,
+            status: 'running',
+            start_time: new Date().toLocaleTimeString()
+        });
+        fetchRunningTasks(); // 立即刷新显示
+    }
+
+    // 页面卸载时清理定时器
+    window.addEventListener('beforeunload', function () {
+        stopTaskMonitoring();
+    });
+</script>
+{% endblock content %}

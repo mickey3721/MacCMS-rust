@@ -1,0 +1,142 @@
+<nav class="bg-white shadow-lg sticky top-0 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center py-4">
+            <!-- Logo -->
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-2xl font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                    {{ SITENAME | default(value="maccms-rust") }}
+                </a>
+            </div>
+
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="/" class="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                    <i class="fas fa-home mr-1"></i>首页
+                </a>
+                {% for category_sub in categories_with_subs %}
+                {% set category = category_sub.0 %}
+                {% set sub_categories = category_sub.1 %}
+                <div class="relative group">
+                    <a href="/list/{{ category.type_id }}" class="text-gray-700 hover:text-blue-600 transition-colors font-medium flex items-center">
+                        {{ category.type_name }}
+                        <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                    </a>
+                    <!-- Dropdown Menu -->
+                    <div class="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                        <div class="py-2">
+                            <a href="/list/{{ category.type_id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                                全部{{ category.type_name }}
+                            </a>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <div class="px-4 py-2 text-xs text-gray-500 font-semibold">热门分类</div>
+                            {% for sub_category in sub_categories %}
+                            <a href="/list/{{ category.type_id }}?sub_type={{ sub_category.type_id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                                <i class="fas fa-film mr-2 text-xs"></i>{{ sub_category.type_name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Search Bar -->
+            <div class="hidden md:flex items-center space-x-4">
+                <form action="/search" method="GET" class="flex items-center">
+                    <div class="relative">
+                        <input type="text" name="wd" placeholder="搜索视频..." 
+                               class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <button type="submit" class="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        搜索
+                    </button>
+                </form>
+                
+                <!-- Play History Button -->
+                <div class="relative group">
+                    <button id="historyButton" class="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-history mr-2"></i>
+                        <span>播放记录</span>
+                        <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                    </button>
+                    
+                    <!-- History Dropdown -->
+                    <div id="historyDropdown" class="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                        <div class="p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800">最近播放</h3>
+                                <button id="clearHistory" class="text-xs text-red-600 hover:text-red-700">清空记录</button>
+                            </div>
+                            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+                                <!-- History items will be inserted here by JavaScript -->
+                                <div class="text-center text-gray-500 py-4">
+                                    <i class="fas fa-history text-2xl mb-2"></i>
+                                    <p class="text-sm">暂无播放记录</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-gray-700 hover:text-blue-600 focus:outline-none">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-gray-200">
+        <div class="container mx-auto px-4 py-4">
+            <div class="space-y-3">
+                <a href="/" class="block text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                    <i class="fas fa-home mr-2"></i>首页
+                </a>
+                {% for category_sub in categories_with_subs %}
+                {% set category = category_sub.0 %}
+                {% set sub_categories = category_sub.1 %}
+                <div>
+                    <a href="/list/{{ category.type_id }}" class="block text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                        <i class="fas fa-film mr-2"></i>{{ category.type_name }}
+                    </a>
+                    <div class="ml-6 mt-2 space-y-2">
+                        {% for sub_category in sub_categories %}
+                        <a href="/list/{{ category.type_id }}?sub_type={{ sub_category.type_id }}" class="block text-gray-600 hover:text-blue-600 transition-colors text-sm">
+                            <i class="fas fa-angle-right mr-2 text-xs"></i>{{ sub_category.type_name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Mobile Search -->
+            <form action="/search" method="GET" class="mt-4">
+                <div class="relative">
+                    <input type="text" name="wd" placeholder="搜索视频..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <button type="submit" class="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    搜索
+                </button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<script>
+    // Mobile menu toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        mobileMenuButton.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+        });
+    });
+</script>

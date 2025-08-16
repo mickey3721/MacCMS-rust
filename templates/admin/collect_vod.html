@@ -1,0 +1,763 @@
+{% extends "admin/base.html" %}
+
+{% block title %}视频采集管理{% endblock title %}
+
+{% block content %}
+<div class="p-6">
+    <!-- 页面标题 -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">视频采集管理</h1>
+        <p class="mt-1 text-sm text-gray-600">从外部API采集视频数据并管理分类绑定</p>
+    </div>
+
+    <!-- 采集源选择 -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">选择采集源</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="collection-select" class="block text-sm font-medium text-gray-700 mb-1">采集源</label>
+                    <select id="collection-select"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">请选择采集源</option>
+                        {% for collection in collections %}
+                        <option value="{{ collection._id }}" data-url="{{ collection.collect_url }}"
+                            data-flag="{{ collection.collect_name }}">{{ collection.collect_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="search-keyword" class="block text-sm font-medium text-gray-700 mb-1">搜索关键词</label>
+                    <input type="text" id="search-keyword" placeholder="输入搜索关键词..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="mt-4 flex space-x-3">
+                <button onclick="loadCategories()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    加载分类列表
+                </button>
+                <button onclick="loadVideoList()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    加载视频列表
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分类绑定管理 -->
+    <div class="bg-white shadow rounded-lg mb-6" id="category-binding-section" style="display: none;">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">分类绑定管理</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                外部分类ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                外部分类名称</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                本地分类</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                绑定状态</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="category-binding-table" class="bg-white divide-y divide-gray-200">
+                        <!-- 动态加载分类绑定数据 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 视频列表 -->
+    <div class="bg-white shadow rounded-lg" id="video-list-section" style="display: none;">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">视频列表</h3>
+                <div class="flex space-x-2">
+                    <button onclick="collectSelected()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        采集选中
+                    </button>
+                    <button onclick="collectToday()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        采集当天
+                    </button>
+                    <button onclick="collectAll()"
+                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        采集所有
+                    </button>
+                </div>
+            </div>
+
+            <!-- 过滤选项 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="category-filter" class="block text-sm font-medium text-gray-700 mb-1">分类过滤</label>
+                    <select id="category-filter"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">全部分类</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="page-select" class="block text-sm font-medium text-gray-700 mb-1">页码</label>
+                    <select id="page-select"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="1">第1页</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="page-size" class="block text-sm font-medium text-gray-700 mb-1">每页数量</label>
+                    <select id="page-size"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="20">20条</option>
+                        <option value="50">50条</option>
+                        <option value="100">100条</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <input type="checkbox" id="select-all"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                视频名称</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                分类</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                来源</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                更新时间</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                状态</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="video-list-table" class="bg-white divide-y divide-gray-200">
+                        <!-- 动态加载视频数据 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="flex items-center justify-between mt-4">
+                <div class="text-sm text-gray-700">
+                    显示第 <span id="page-start">1</span> 到 <span id="page-end">20</span> 条，共 <span
+                        id="total-count">0</span> 条记录
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="previousPage()"
+                        class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        上一页
+                    </button>
+                    <button onclick="nextPage()"
+                        class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        下一页
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 采集进度模态框 -->
+    <div id="collect-progress-modal"
+        class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">采集进度</h3>
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>进度</span>
+                        <span id="progress-text">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-center mb-4">
+                    <div>
+                        <div class="text-lg font-bold text-blue-600" id="total-items">0</div>
+                        <div class="text-xs text-gray-600">总数</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-green-600" id="success-items">0</div>
+                        <div class="text-xs text-gray-600">成功</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-red-600" id="failed-items">0</div>
+                        <div class="text-xs text-gray-600">失败</div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">采集日志</label>
+                    <div id="collect-log"
+                        class="bg-gray-50 border rounded-md p-3 h-32 overflow-y-auto text-sm text-gray-700">
+                        等待采集开始...
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="closeProgressModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 全局变量
+    var currentCollection = null;
+    var currentCategories = [];
+    var currentVideos = [];
+    var currentPage = 1;
+    var totalPages = 1;
+    var bindings = JSON.parse('{{ bindings | json_encode() | safe }}');
+    var localTypes = JSON.parse('{{ types | json_encode() | safe }}');
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        setupEventListeners();
+        loadBindings();
+    });
+
+    // 设置事件监听器
+    function setupEventListeners() {
+        document.getElementById('select-all').addEventListener('change', function () {
+            var checkboxes = document.querySelectorAll('#video-list-table input[type="checkbox"]');
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = this.checked;
+            }.bind(this));
+        });
+
+        document.getElementById('category-filter').addEventListener('change', function () {
+            loadVideoList();
+        });
+
+        document.getElementById('page-select').addEventListener('change', function () {
+            currentPage = parseInt(this.value);
+            loadVideoList();
+        });
+
+        document.getElementById('page-size').addEventListener('change', function () {
+            currentPage = 1;
+            loadVideoList();
+        });
+    }
+
+    // 加载分类列表
+    function loadCategories() {
+        var collectionSelect = document.getElementById('collection-select');
+        if (!collectionSelect.value) {
+            showToast('请先选择采集源', 'error');
+            return;
+        }
+
+        var selectedOption = collectionSelect.options[collectionSelect.selectedIndex];
+        var apiUrl = selectedOption.dataset.url;
+        var sourceFlag = selectedOption.dataset.flag;
+
+        currentCollection = {
+            id: collectionSelect.value,
+            url: apiUrl,
+            flag: sourceFlag,
+            name: selectedOption.text
+        };
+
+        showToast('正在加载分类列表...', 'info');
+
+        // 调用API获取分类列表
+        fetch('/api/collect/categories?url=' + encodeURIComponent(apiUrl))
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('网络请求失败');
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                if (data.success) {
+                    currentCategories = data.categories || [];
+                    renderCategoryBindings();
+                    updateCategoryFilter();
+                    document.getElementById('category-binding-section').style.display = 'block';
+                    showToast('分类列表加载成功', 'success');
+                } else {
+                    showToast('加载分类列表失败: ' + (data.message || '未知错误'), 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('加载分类列表失败', 'error');
+            });
+    }
+
+    // 渲染分类绑定表格
+    function renderCategoryBindings() {
+        var tbody = document.getElementById('category-binding-table');
+        tbody.innerHTML = '';
+
+        currentCategories.forEach(function (category) {
+            var bindingId = currentCollection.flag + '_' + category.type_id;
+            var binding = bindings.find(function (b) {
+                // 处理类型转换：确保比较时类型一致
+                var bExternalId = b.external_id.toString();
+                var categoryTypeId = category.type_id.toString();
+                return b.source_flag === currentCollection.flag && bExternalId === categoryTypeId;
+            });
+
+            var row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+
+            var statusClass = binding ? 'text-green-600' : 'text-red-600';
+            var statusText = binding ? '已绑定' : '未绑定';
+
+            row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${category.type_id}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${category.type_name}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <select class="local-type-select px-2 py-1 border border-gray-300 rounded text-sm" data-external-id="${category.type_id}">
+                    <option value="">请选择本地分类</option>
+                    ${localTypes.map(function (type) {
+                var selected = binding && binding.local_type_id === type.type_id ? 'selected' : '';
+                return `<option value="${type.type_id}" ${selected}>${type.type_name}</option>`;
+            }).join('')}
+                </select>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${statusClass}">${statusText}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="saveBinding('${category.type_id}')" class="text-blue-600 hover:text-blue-900 mr-2">保存绑定</button>
+                ${binding ? `<button onclick="removeBinding('${bindingId}')" class="text-red-600 hover:text-red-900">删除绑定</button>` : ''}
+            </td>
+        `;
+
+            tbody.appendChild(row);
+        });
+    }
+
+    // 保存分类绑定
+    function saveBinding(externalId) {
+        var select = document.querySelector(`select[data-external-id="${externalId}"]`);
+        var localTypeId = parseInt(select.value);
+
+        if (!localTypeId) {
+            showToast('请选择本地分类', 'error');
+            return;
+        }
+
+        var data = {
+            source_flag: currentCollection.flag,
+            external_id: externalId.toString(),
+            local_type_id: localTypeId
+        };
+
+        fetch('/api/admin/bindings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    showToast('绑定保存成功', 'success');
+                    // 重新加载绑定数据
+                    loadBindings();
+                } else {
+                    showToast('绑定保存失败', 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('绑定保存失败', 'error');
+            });
+    }
+
+    // 删除分类绑定
+    function removeBinding(bindingId) {
+        if (!confirm('确定要删除这个绑定吗？')) {
+            return;
+        }
+
+        fetch('/api/admin/bindings/' + bindingId, {
+            method: 'DELETE'
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    showToast('绑定删除成功', 'success');
+                    loadBindings();
+                } else {
+                    showToast('绑定删除失败', 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('绑定删除失败', 'error');
+            });
+    }
+
+    // 加载绑定数据
+    function loadBindings() {
+        fetch('/api/admin/bindings')
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                bindings = data || [];
+                if (currentCategories.length > 0) {
+                    renderCategoryBindings();
+                }
+            })
+            .catch(function (error) {
+                console.error('Error loading bindings:', error);
+            });
+    }
+
+    // 更新分类过滤器
+    function updateCategoryFilter() {
+        var categoryFilter = document.getElementById('category-filter');
+        categoryFilter.innerHTML = '<option value="">全部分类</option>';
+
+        currentCategories.forEach(function (category) {
+            var option = document.createElement('option');
+            option.value = category.type_id;
+            option.textContent = category.type_name;
+            categoryFilter.appendChild(option);
+        });
+    }
+
+    // 加载视频列表
+    function loadVideoList() {
+        if (!currentCollection) {
+            showToast('请先选择采集源', 'error');
+            return;
+        }
+
+        var categoryId = document.getElementById('category-filter').value;
+        var pageSize = parseInt(document.getElementById('page-size').value);
+        var searchKeyword = document.getElementById('search-keyword').value;
+
+        var params = new URLSearchParams({
+            url: currentCollection.url,
+            page: currentPage,
+            limit: pageSize
+        });
+
+        if (categoryId) {
+            params.append('type', categoryId);
+        }
+
+        if (searchKeyword) {
+            params.append('wd', searchKeyword);
+        }
+
+        showToast('正在加载视频列表...', 'info');
+
+        fetch('/api/collect/videos?' + params.toString())
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('网络请求失败');
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                if (data.success) {
+                    currentVideos = data.videos || [];
+                    totalPages = data.total_pages || 1;
+                    renderVideoList();
+                    updatePagination(data.total || 0);
+                    document.getElementById('video-list-section').style.display = 'block';
+                    showToast('视频列表加载成功', 'success');
+                } else {
+                    showToast('加载视频列表失败: ' + (data.message || '未知错误'), 'error');
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('加载视频列表失败', 'error');
+            });
+    }
+
+    // 渲染视频列表
+    function renderVideoList() {
+        var tbody = document.getElementById('video-list-table');
+        tbody.innerHTML = '';
+
+        currentVideos.forEach(function (video, index) {
+            var row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+
+            // 查找分类名称
+            var category = currentCategories.find(function (cat) {
+                return cat.type_id.toString() === video.type_id.toString();
+            });
+            var categoryName = category ? category.type_name : video.type_id;
+
+            // 检查是否已采集
+            var isCollected = false; // 这里可以添加检查逻辑
+            var statusClass = isCollected ? 'text-green-600' : 'text-gray-600';
+            var statusText = isCollected ? '已采集' : '未采集';
+
+            row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <input type="checkbox" class="video-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" data-video-id="${video.vod_id}">
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${video.vod_name}</div>
+                <div class="text-sm text-gray-500">${video.vod_remarks || ''}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${categoryName}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${currentCollection.name}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${video.vod_time || ''}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${statusClass}">${statusText}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="collectSingle('${video.vod_id}')" class="text-blue-600 hover:text-blue-900">采集</button>
+            </td>
+        `;
+
+            tbody.appendChild(row);
+        });
+    }
+
+    // 更新分页信息
+    function updatePagination(total) {
+        var pageSize = parseInt(document.getElementById('page-size').value);
+        var start = (currentPage - 1) * pageSize + 1;
+        var end = Math.min(currentPage * pageSize, total);
+
+        document.getElementById('page-start').textContent = start;
+        document.getElementById('page-end').textContent = end;
+        document.getElementById('total-count').textContent = total;
+
+        // 更新页码选择器
+        var pageSelect = document.getElementById('page-select');
+        pageSelect.innerHTML = '';
+        for (var i = 1; i <= totalPages; i++) {
+            var option = document.createElement('option');
+            option.value = i;
+            option.textContent = '第' + i + '页';
+            if (i === currentPage) {
+                option.selected = true;
+            }
+            pageSelect.appendChild(option);
+        }
+    }
+
+    // 上一页
+    function previousPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadVideoList();
+        }
+    }
+
+    // 下一页
+    function nextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadVideoList();
+        }
+    }
+
+    // 采集选中的视频
+    function collectSelected() {
+        var checkboxes = document.querySelectorAll('#video-list-table .video-checkbox:checked');
+        if (checkboxes.length === 0) {
+            showToast('请选择要采集的视频', 'error');
+            return;
+        }
+
+        var videoIds = Array.from(checkboxes).map(function (checkbox) {
+            return checkbox.dataset.videoId;
+        });
+
+        startCollectTask({
+            type: 'selected',
+            video_ids: videoIds
+        });
+    }
+
+    // 采集当天的视频
+    function collectToday() {
+        startCollectTask({
+            type: 'today',
+            hours: 24
+        });
+    }
+
+    // 采集所有视频
+    function collectAll() {
+        if (!confirm('确定要采集所有视频吗？这可能需要较长时间。')) {
+            return;
+        }
+
+        startCollectTask({
+            type: 'all'
+        });
+    }
+
+    // 采集单个视频
+    function collectSingle(videoId) {
+        startCollectTask({
+            type: 'single',
+            video_ids: [videoId]
+        });
+    }
+
+    // 开始采集任务
+    function startCollectTask(params) {
+        if (!currentCollection) {
+            showToast('请先选择采集源', 'error');
+            return;
+        }
+
+        var data = {
+            collection_id: currentCollection._id['$oid'],
+            source_flag: currentCollection.flag,
+            api_url: currentCollection.url
+        };
+
+        // 合并参数
+        Object.keys(params).forEach(function (key) {
+            data[key] = params[key];
+        });
+
+        // 显示进度模态框
+        document.getElementById('collect-progress-modal').classList.remove('hidden');
+        resetProgressModal();
+
+        fetch('/api/collect/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('启动采集任务失败');
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                if (data.success) {
+                    showToast('采集任务已启动', 'success');
+                    // 开始轮询任务状态
+                    pollCollectProgress(data.task_id);
+                } else {
+                    showToast('启动采集任务失败: ' + (data.message || '未知错误'), 'error');
+                    closeProgressModal();
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+                showToast('启动采集任务失败', 'error');
+                closeProgressModal();
+            });
+    }
+
+    // 轮询采集进度
+    function pollCollectProgress(taskId) {
+        var interval = setInterval(function () {
+            fetch('/api/collect/progress/' + taskId)
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (data.success) {
+                        updateProgressModal(data.progress);
+
+                        if (data.progress.status === 'completed' || data.progress.status === 'failed') {
+                            clearInterval(interval);
+                            if (data.progress.status === 'completed') {
+                                showToast('采集任务完成', 'success');
+                            } else {
+                                showToast('采集任务失败', 'error');
+                            }
+                        }
+                    } else {
+                        clearInterval(interval);
+                        showToast('获取采集进度失败', 'error');
+                    }
+                })
+                .catch(function (error) {
+                    console.error('Error:', error);
+                    clearInterval(interval);
+                    showToast('获取采集进度失败', 'error');
+                });
+        }, 2000);
+    }
+
+    // 重置进度模态框
+    function resetProgressModal() {
+        document.getElementById('progress-text').textContent = '0%';
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('total-items').textContent = '0';
+        document.getElementById('success-items').textContent = '0';
+        document.getElementById('failed-items').textContent = '0';
+        document.getElementById('collect-log').textContent = '等待采集开始...';
+    }
+
+    // 更新进度模态框
+    function updateProgressModal(progress) {
+        var percentage = progress.total > 0 ? Math.round((progress.success + progress.failed) / progress.total * 100) : 0;
+
+        document.getElementById('progress-text').textContent = percentage + '%';
+        document.getElementById('progress-bar').style.width = percentage + '%';
+        document.getElementById('total-items').textContent = progress.total || 0;
+        document.getElementById('success-items').textContent = progress.success || 0;
+        document.getElementById('failed-items').textContent = progress.failed || 0;
+        document.getElementById('collect-log').textContent = progress.log || '采集进行中...';
+    }
+
+    // 关闭进度模态框
+    function closeProgressModal() {
+        document.getElementById('collect-progress-modal').classList.add('hidden');
+    }
+
+    // 显示提示消息
+    function showToast(message, type) {
+        // 创建提示元素
+        var toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 px-4 py-2 rounded-md text-white z-50 transition-opacity duration-300';
+
+        switch (type) {
+            case 'success':
+                toast.className += ' bg-green-500';
+                break;
+            case 'error':
+                toast.className += ' bg-red-500';
+                break;
+            case 'info':
+                toast.className += ' bg-blue-500';
+                break;
+            default:
+                toast.className += ' bg-gray-500';
+        }
+
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // 3秒后自动移除
+        setTimeout(function () {
+            toast.style.opacity = '0';
+            setTimeout(function () {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+</script>
+{% endblock content %}

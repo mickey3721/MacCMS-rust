@@ -1,0 +1,338 @@
+{% extends "admin/base.html" %}
+
+{% block title %}数据库索引管理{% endblock title %}
+
+{% block content %}
+<div class="p-6">
+    <!-- 页面标题 -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">数据库索引管理</h1>
+        <p class="mt-1 text-sm text-gray-600">管理和优化数据库查询性能</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div class="mb-4 sm:mb-0">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">索引操作</h3>
+                    <p class="mt-1 text-sm text-gray-500">管理数据库索引以提升查询性能</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="createIndexes()" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        创建索引
+                    </button>
+                    <button onclick="checkIndexStatus()" 
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        检查状态
+                    </button>
+                    <button onclick="listIndexes()" 
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                        </svg>
+                        列出索引
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 索引信息 -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">索引信息</h3>
+            
+            <!-- vods 集合索引 -->
+            <div class="mb-6">
+                <h4 class="text-md font-medium text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    vods 集合
+                </h4>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">vod_name_year_idx</div>
+                            <div class="text-sm text-gray-600">复合索引: vod_name(1), vod_year(1)</div>
+                            <div class="text-xs text-blue-600 mt-1">唯一索引</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">type_id_idx</div>
+                            <div class="text-sm text-gray-600">单字段索引: type_id(1)</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">vod_pubdate_desc_idx</div>
+                            <div class="text-sm text-gray-600">降序索引: vod_pubdate(-1)</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">vod_year_idx</div>
+                            <div class="text-sm text-gray-600">单字段索引: vod_year(1)</div>
+                            <div class="text-xs text-green-600 mt-1">稀疏索引</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">vod_status_pubdate_idx</div>
+                            <div class="text-sm text-gray-600">复合索引: vod_status(1), vod_pubdate(-1)</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">type_id_pubdate_idx</div>
+                            <div class="text-sm text-gray-600">复合索引: type_id(1), vod_pubdate(-1)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- types 集合索引 -->
+            <div class="mb-6">
+                <h4 class="text-md font-medium text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    types 集合
+                </h4>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">type_id_unique_idx</div>
+                            <div class="text-sm text-gray-600">单字段索引: type_id(1)</div>
+                            <div class="text-xs text-blue-600 mt-1">唯一索引</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">type_pid_sort_idx</div>
+                            <div class="text-sm text-gray-600">复合索引: type_pid(1), type_sort(1)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- bindings 集合索引 -->
+            <div class="mb-6">
+                <h4 class="text-md font-medium text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-purple-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                    </svg>
+                    bindings 集合
+                </h4>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">source_flag_external_id_unique_idx</div>
+                            <div class="text-sm text-gray-600">复合索引: source_flag(1), external_id(1)</div>
+                            <div class="text-xs text-blue-600 mt-1">唯一索引</div>
+                            <div class="text-xs text-green-600 mt-1">稀疏索引</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">local_type_id_idx</div>
+                            <div class="text-sm text-gray-600">单字段索引: local_type_id(1)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- collections 集合索引 -->
+            <div class="mb-6">
+                <h4 class="text-md font-medium text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-yellow-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    collections 集合
+                </h4>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">collect_status_type_idx</div>
+                            <div class="text-sm text-gray-600">复合索引: collect_status(1), collect_type(1)</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">created_at_desc_idx</div>
+                            <div class="text-sm text-gray-600">降序索引: created_at(-1)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- configs 集合索引 -->
+            <div class="mb-6">
+                <h4 class="text-md font-medium text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    configs 集合
+                </h4>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">config_key_unique_idx</div>
+                            <div class="text-sm text-gray-600">单字段索引: config_key(1)</div>
+                            <div class="text-xs text-blue-600 mt-1">唯一索引</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="font-medium text-gray-900">config_group_sort_idx</div>
+                            <div class="text-sm text-gray-600">复合索引: config_group(1), config_sort(1)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 性能说明 -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">索引优化说明</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><strong>唯一索引</strong>：确保字段值唯一性，提升查询速度</li>
+                        <li><strong>稀疏索引</strong>：只为包含索引字段的文档创建索引，节省存储空间</li>
+                        <li><strong>复合索引</strong>：优化多字段查询，支持前缀匹配</li>
+                        <li><strong>降序索引</strong>：优化倒序查询，如最新内容显示</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 通知 -->
+<div id="toast" class="fixed top-4 right-4 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden hidden">
+    <div class="p-4">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg id="toast-icon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="ml-3 w-0 flex-1 pt-0.5">
+                <p id="toast-message" class="text-sm font-medium text-gray-900"></p>
+            </div>
+            <div class="ml-4 flex-shrink-0 flex">
+                <button onclick="hideToast()" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 创建索引
+    function createIndexes() {
+        if (!confirm('确定要创建所有数据库索引吗？此操作可能需要一些时间。')) {
+            return;
+        }
+
+        showToast('正在创建索引...', 'info');
+
+        fetch('/api/admin/indexes/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('创建索引失败', 'error');
+        });
+    }
+
+    // 检查索引状态
+    function checkIndexStatus() {
+        showToast('正在检查索引状态...', 'info');
+
+        fetch('/api/admin/indexes/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('检查索引状态失败', 'error');
+        });
+    }
+
+    // 列出索引
+    function listIndexes() {
+        showToast('正在获取索引列表...', 'info');
+
+        fetch('/api/admin/indexes/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // 详细信息已在控制台输出
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('获取索引列表失败', 'error');
+        });
+    }
+
+    // 显示Toast通知
+    function showToast(message, type) {
+        var toast = document.getElementById('toast');
+        var icon = document.getElementById('toast-icon');
+        var messageEl = document.getElementById('toast-message');
+
+        messageEl.textContent = message;
+
+        // 设置图标和颜色
+        if (type === 'success') {
+            icon.className = 'h-6 w-6 text-green-400';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+            toast.className = 'fixed top-4 right-4 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden';
+        } else if (type === 'error') {
+            icon.className = 'h-6 w-6 text-red-400';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>';
+            toast.className = 'fixed top-4 right-4 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden';
+        } else {
+            icon.className = 'h-6 w-6 text-blue-400';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+            toast.className = 'fixed top-4 right-4 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden';
+        }
+
+        toast.classList.remove('hidden');
+
+        // 3秒后自动隐藏
+        setTimeout(function () {
+            hideToast();
+        }, 3000);
+    }
+
+    // 隐藏Toast通知
+    function hideToast() {
+        document.getElementById('toast').classList.add('hidden');
+    }
+</script>
+{% endblock content %}
