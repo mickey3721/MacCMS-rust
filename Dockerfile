@@ -1,38 +1,107 @@
+# 使用 Ubuntu 22.04 作为基础镜像
 FROM ubuntu:22.04
 
-# 安装必要的构建工具和依赖
+# 设置环境变量
+ENV DEBIAN_FRONTEND=noninteractive
+ENV MONGODB_VERSION=8.0
+ENV MONGODB_PACKAGE=mongodb-org
+
+# 安装必要的工具
 RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
     curl \
-    build-essential \
-    musl-tools \
-    musl-dev \
-    libssl-dev \
-    pkg-config \
+    gnupg \
+    systemctl \
+    supervisor \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# 为musl目标创建OpenSSL符号链接
-RUN ln -s /usr/include/openssl /usr/include/x86_64-linux-musl/openssl || true
-RUN ln -s /usr/lib/x86_64-linux-gnu/libssl.a /usr/lib/x86_64-linux-musl/libssl.a || true
-RUN ln -s /usr/lib/x86_64-linux-gnu/libcrypto.a /usr/lib/x86_64-linux-musl/libcrypto.a || true
+# 添加 MongoDB GPG 密钥
+RUN curl -fsSL https://www.mongodb.org/static/pgp/server-${MONGODB_VERSION}.asc | gpg -o /usr/share/keyrings/mongodb-server-${MONGODB_VERSION}.gpg --dearmor
 
-# 安装Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+# 添加 MongoDB 仓库
+RUN echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-${MONGODB_VERSION}.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/${MONGODB_VERSION} multiverse" | tee /etc/apt/sources.list.d/mongodb-org-${MONGODB_VERSION}.list
 
-# 添加musl目标
-RUN rustup target add x86_64-unknown-linux-musl
+# 安装 MongoDB
+RUN apt-get update && apt-get install -y ${MONGODB_PACKAGE} \
+    && rm -rf /var/lib/apt/lists/*
 
-# 设置环境变量以支持静态链接OpenSSL
-ENV OPENSSL_STATIC=1
-ENV OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-musl
-ENV OPENSSL_INCLUDE_DIR=/usr/include/openssl
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-ENV PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
-ENV CC_x86_64_unknown_linux_musl=x86_64-linux-musl-gcc
-ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc
-
+# 创建应用目录
 WORKDIR /app
-COPY . .
 
-# 使用vendored OpenSSL进行静态编译
-RUN cargo build --release --target x86_64-unknown-linux-musl --features vendored
+# 下载最新的 MacCMS Rust 版本
+RUN wget -O linux.zip https://github.com/TFTG-CLOUD/maccms-rust/releases/latest/download/linux.zip \
+    && unzip linux.zip \
+    && rm linux.zip
+
+# 生成随机密码
+RUN RANDOM_PASSWORD=$(openssl rand -base64 12) \
+    && echo "DATABASE_URL=mongodb://localhost:27017/maccms_rust" > .env \
+    && echo "SERVER_HOST=0.0.0.0" >> .env \
+    && echo "SERVER_PORT=8080" >> .env \
+    && echo "ADMIN_USERNAME=admin" >> .env \
+    && echo "ADMIN_PASSWORD=${RANDOM_PASSWORD}" >> .env \
+    && echo "SESSION_SECRET=$(openssl rand -hex 32)" >> .env \
+    && echo "RUST_LOG=info" >> .env
+
+# 创建必要的目录
+RUN mkdir -p /app/static/images \
+    && mkdir -p /var/log/mongodb \
+    && mkdir -p /var/log/maccms \
+    && mkdir -p /var/log/supervisor \
+    && mkdir -p /var/lib/mongodb
+
+# 复制 MongoDB 配置文件
+COPY <<EOF /etc/mongod.conf
+storage:
+  dbPath: /var/lib/mongodb
+  journal:
+    enabled: true
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/mongod.log
+net:
+  port: 27017
+  bindIp: 127.0.0.1
+processManagement:
+  timeZoneInfo: /usr/share/zoneinfo
+EOF
+
+# 复制 Supervisor 配置
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+user=root
+
+[program:mongodb]
+command=/usr/bin/mongod --config /etc/mongod.conf
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/supervisor/mongodb.log
+stderr_logfile=/var/log/supervisor/mongodb.err
+
+[program:maccms_rust]
+command=/app/maccms_rust
+directory=/app
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/supervisor/maccms.log
+stderr_logfile=/var/log/supervisor/maccms.err
+user=root
+environment=DATABASE_URL="mongodb://localhost:27017/maccms_rust",SERVER_HOST="0.0.0.0",SERVER_PORT="8080",RUST_LOG="info"
+EOF
+
+# 设置二进制文件执行权限
+RUN chmod +x /app/maccms_rust
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动 Supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/api/health || exit 1
