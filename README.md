@@ -29,26 +29,31 @@ MacCMS Rust Edition 是基于 Rust 语言重构的高性能视频内容管理系
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # 安装 MongoDB (Ubuntu/Debian)
+sudo apt-get install gnupg curl
+curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
+   sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg \
+   --dearmor
+
+# Ubuntu 22.04 其他版本参考官方文档
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+
 sudo apt update
-sudo apt install mongodb
+sudo apt-get install -y mongodb-org
 
 # 启动 MongoDB
-sudo systemctl start mongodb
+sudo systemctl start mongod
 ```
 
 ### 2. 克隆项目
 
 ```bash
-git clone <repository-url>
-cd maccms_rust
+git clone https://github.com/TFTG-CLOUD/MacCMS-rust
+cd MacCMS-rust
 ```
 
 ### 3. 配置环境变量
 
 ```bash
-# 复制环境变量模板
-cp .env.example .env
-
 # 编辑配置文件
 nano .env
 ```
@@ -57,18 +62,19 @@ nano .env
 
 ```env
 # 数据库连接
-DATABASE_URL=mongodb://localhost:27017/maccms_rust
+DATABASE_URL=mongodb://localhost:27017
+DATABASE_NAME=maccms_rust
 
 # 服务器配置
 SERVER_HOST=127.0.0.1
 SERVER_PORT=8080
 
 # 管理员账户
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_secure_password
+ADMIN_USER=admin
+ADMIN_PASS=your_secure_password
 
 # 会话密钥
-SESSION_SECRET=your_session_secret_key
+SESSION_SECRET_KEY=your_session_secret_key
 ```
 
 ### 4. 编译运行
@@ -80,8 +86,11 @@ cargo run
 # 生产模式编译
 cargo build --release
 
+# 复制生产版本到根目录
+cp target/release/maccms-rust ../../
+
 # 运行生产版本
-./target/release/maccms_rust
+./maccms-rust
 ```
 
 ### 5. 访问系统
@@ -325,18 +334,19 @@ sudo nano .env
 
 ```env
 # 数据库连接
-DATABASE_URL=mongodb://localhost:27017/maccms_rust
+DATABASE_URL=mongodb://localhost:27017
+DATABASE_NAME=maccms_rust
 
 # 服务器配置
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8080
 
 # 管理员账户
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_secure_password
+ADMIN_USER=admin
+ADMIN_PASS=your_secure_password
 
 # 会话密钥（请修改为随机字符串）
-SESSION_SECRET=your_random_session_secret_key_here
+SESSION_SECRET_KEY=your_random_session_secret_key_here
 
 # 日志级别
 RUST_LOG=info
@@ -464,6 +474,10 @@ sudo firewall-cmd --reload
 #### 1. 构建镜像
 
 ```bash
+curl -sSL https://get.docker.com/ | sh
+systemctl start docker
+systemctl enable docker
+
 # 克隆项目
 git clone https://github.com/TFTG-CLOUD/maccms-rust
 cd maccms-rust
@@ -594,8 +608,8 @@ docker run -d \
   -v maccms_static:/app/static \
   -e SERVER_HOST=0.0.0.0 \
   -e SERVER_PORT=8080 \
-  -e ADMIN_USERNAME=admin \
-  -e ADMIN_PASSWORD=your_custom_password \
+  -e ADMIN_USER=admin \
+  -e ADMIN_PASS=your_custom_password \
   -e RUST_LOG=debug \
   --restart unless-stopped \
   maccms-rust:latest

@@ -37,13 +37,18 @@ RUN wget -O linux.zip https://github.com/TFTG-CLOUD/maccms-rust/releases/latest/
 
 # 生成随机密码
 RUN RANDOM_PASSWORD=$(openssl rand -base64 12) \
-    && echo "DATABASE_URL=mongodb://localhost:27017/maccms_rust" > .env \
+    && echo "DATABASE_URL=mongodb://localhost:27017" > .env \
+    && echo "DATABASE_NAME=maccms_rust" >> .env \
     && echo "SERVER_HOST=0.0.0.0" >> .env \
     && echo "SERVER_PORT=8080" >> .env \
-    && echo "ADMIN_USERNAME=admin" >> .env \
-    && echo "ADMIN_PASSWORD=${RANDOM_PASSWORD}" >> .env \
-    && echo "SESSION_SECRET=$(openssl rand -hex 32)" >> .env \
-    && echo "RUST_LOG=info" >> .env
+    && echo "ADMIN_USER=admin" >> .env \
+    && echo "ADMIN_PASS=${RANDOM_PASSWORD}" >> .env \
+    && echo "SESSION_SECRET_KEY=$(openssl rand -hex 32)" >> .env \
+    && echo "RUST_LOG=info" >> .env \
+    && mkdir -p /app/static \
+    && echo "Admin Username: admin" > /app/static/admin_credentials.txt \
+    && echo "Admin Password: ${RANDOM_PASSWORD}" >> /app/static/admin_credentials.txt \
+    && echo "Generated at: $(date)" >> /app/static/admin_credentials.txt
 
 # 创建必要的目录
 RUN mkdir -p /app/static/images \
