@@ -6,7 +6,7 @@ MacCMS Rust Edition 是基于 Rust 语言重构的高性能视频内容管理系
 
 ### ✨ 核心优势
 
-- **🔥 极致性能**: 相同配置服务器下，并发处理能力是原版 MacCMS 的 **10倍以上**
+- **🔥 极致性能**: 相同配置服务器下，并发处理能力是原版 MacCMS 的 **10 倍以上**
 - **🛡️ 内存安全**: Rust 语言保障，杜绝内存泄漏和缓冲区溢出
 - **⚡ 异步架构**: 基于 Tokio 和 Actix Web，支持高并发 I/O 操作
 - **📊 实时监控**: 内置任务进度监控和性能统计
@@ -54,6 +54,7 @@ nano .env
 ```
 
 环境变量配置示例：
+
 ```env
 # 数据库连接
 DATABASE_URL=mongodb://localhost:27017/maccms_rust
@@ -107,28 +108,24 @@ cargo build --release
 ```
 src/
 ├── main.rs              # 应用入口
-├── models/              # 数据模型
-│   ├── mod.rs
-│   ├── user.rs          # 用户模型
-│   ├── vod.rs           # 视频模型
-│   ├── type.rs          # 分类模型
-│   └── collection.rs    # 采集源模型
-├── handlers/            # 处理器模块
-│   ├── mod.rs
-│   ├── api_handlers.rs      # API 接口处理器
-│   ├── web_handlers.rs      # Web 页面处理器
-│   ├── admin_handlers.rs    # 管理后台处理器
-│   └── collect_handlers.rs  # 采集功能处理器
-├── db.rs                 # 数据库连接
-├── auth.rs               # 认证模块
-├── template.rs           # 模板渲染
-├── index_manager.rs      # 索引管理
-└── init_data.rs          # 初始数据
+├── models.rs            # 数据模型（Vod、Type、Collection、Binding、Config等）
+├── api_handlers.rs      # 前台API接口处理器
+├── web_handlers.rs      # Web页面处理器
+├── admin_handlers.rs    # 管理后台API处理器
+├── collect_handlers.rs  # 采集功能处理器
+├── db.rs                # 数据库连接
+├── auth.rs              # 认证模块
+├── dto.rs               # 数据传输对象
+├── template.rs          # 模板渲染
+├── index_manager.rs     # 索引管理
+├── init_data.rs         # 初始数据
+└── site_data.rs         # 站点数据缓存管理
 ```
 
 ## 🔧 核心功能
 
 ### 1. 视频管理
+
 - ✅ 视频增删改查
 - ✅ 批量操作
 - ✅ 状态管理（已发布/待审核/已禁用）
@@ -138,12 +135,14 @@ src/
 - ✅ 排序功能
 
 ### 2. 分类管理
+
 - ✅ 多级分类支持
 - ✅ 分类绑定
 - ✅ 排序和状态控制
 - ✅ 模板配置
 
 ### 3. 采集系统
+
 - ✅ 多源采集支持
 - ✅ 实时任务监控
 - ✅ 批量采集
@@ -153,18 +152,21 @@ src/
 - ✅ 进度追踪
 
 ### 4. 播放源管理
+
 - ✅ 多播放源支持
 - ✅ 播放地址解析
 - ✅ 源状态监控
 - ✅ 自动切换
 
 ### 5. 用户系统
+
 - ✅ 管理员登录
 - ✅ 会话管理
 - ✅ 权限控制
 - ✅ 安全认证
 
 ### 6. 系统配置
+
 - ✅ 网站配置
 - ✅ 采集配置
 - ✅ 播放配置
@@ -173,19 +175,22 @@ src/
 ## 📊 性能对比
 
 ### 基准测试环境
-- **服务器**: 4核8G，SSD 存储
+
+- **服务器**: 4 核 8G，SSD 存储
 - **并发数**: 1000 并发连接
 - **测试时长**: 10 分钟
 
 ### 性能指标
 
-| 指标 | MacCMS PHP 版本 | MacCMS Rust 版本 | 提升倍数 |
-|------|-----------------|-----------------|----------|
-| 并发处理能力 | ~100 QPS | ~1200 QPS | **12x** |
-| 内存使用 | ~512MB | ~128MB | **4x** |
-| 响应时间 | ~200ms | ~15ms | **13x** |
-| CPU 使用率 | ~80% | ~25% | **3.2x** |
-| 数据库查询 | ~50ms | ~5ms | **10x** |
+实际上，MacCMS Rust 版本的性能要比图示的更高！
+
+| 指标         | MacCMS PHP 版本 | MacCMS Rust 版本 | 提升倍数 |
+| ------------ | --------------- | ---------------- | -------- |
+| 并发处理能力 | ~100 QPS        | ~1200 QPS        | **12x**  |
+| 内存使用     | ~512MB          | ~128MB           | **4x**   |
+| 响应时间     | ~200ms          | ~15ms            | **13x**  |
+| CPU 使用率   | ~80%            | ~25%             | **3.2x** |
+| 数据库查询   | ~50ms           | ~5ms             | **10x**  |
 
 ### 性能优化技术
 
@@ -206,6 +211,7 @@ GET    /api/admin/vods              # 获取视频列表（支持分页、筛选
 POST   /api/admin/vods              # 创建视频
 PUT    /api/admin/vods/{id}         # 更新视频
 DELETE /api/admin/vods/{id}         # 删除视频
+DELETE /api/admin/vods              # 批量删除视频
 
 # 分类管理
 GET    /api/admin/types             # 获取分类列表
@@ -219,31 +225,65 @@ POST   /api/admin/collections       # 创建采集源
 PUT    /api/admin/collections/{id}  # 更新采集源
 DELETE /api/admin/collections/{id}  # 删除采集源
 POST   /api/admin/collections/{id}/collect  # 启动采集
+GET    /api/admin/collections/{id}/binding-status  # 获取采集源绑定状态
+
+# 分类绑定管理
+GET    /api/admin/bindings          # 获取绑定列表
+POST   /api/admin/bindings          # 创建/更新绑定
+
+# 网站配置管理
+GET    /api/admin/configs           # 获取配置列表
+POST   /api/admin/configs           # 创建配置
+PUT    /api/admin/configs/{key}     # 更新配置
+DELETE /api/admin/configs/{key}     # 删除配置
+GET    /api/admin/configs/{key}      # 获取单个配置
+
+# 采集任务管理
+GET    /api/admin/collect/progress/{task_id}  # 获取采集进度
+GET    /api/admin/running-tasks     # 获取运行中的任务
+POST   /api/admin/collect/stop/{task_id}     # 停止采集任务
+
+# 索引管理
+POST   /api/admin/indexes/create    # 创建索引
+GET    /api/admin/indexes/status    # 索引状态检查
+GET    /api/admin/indexes/list      # 列出所有索引
 
 # 系统统计
 GET    /api/admin/statistics        # 获取系统统计信息
-GET    /api/admin/indexes/status    # 索引状态检查
-POST   /api/admin/indexes/create    # 创建索引
 ```
 
 ### 前台 API
 
 ```bash
 # 视频接口
-GET    /api/provide/vod             # 视频数据提供接口
+GET    /api/provide/vod             # 视频数据提供接口（MacCMS兼容）
 GET    /api/videos/{type_id}        # 按分类获取视频
 GET    /api/videos/detail/{vod_id}  # 视频详情
 GET    /api/categories/hierarchy    # 分类层级结构
 GET    /api/filter-options          # 筛选选项
+
+# 基础接口
+GET    /vods                        # 获取视频列表（简化版）
+```
+
+### 采集 API
+
+```bash
+# 采集接口
+GET    /api/collect/categories      # 获取采集源分类
+GET    /api/collect/videos          # 获取采集源视频列表
+POST   /api/collect/start           # 开始采集任务
+GET    /api/collect/progress/{task_id}  # 获取采集进度
+POST   /api/collect/stop/{task_id}  # 停止采集任务
 ```
 
 ### 分页查询示例
 
 ```javascript
 // 获取视频列表（第2页，每页20条，分类ID为1，状态为已发布）
-fetch('/api/admin/vods?page=2&limit=20&type_id=1&status=1&search=关键词')
-  .then(response => response.json())
-  .then(data => {
+fetch("/api/admin/vods?page=2&limit=20&type_id=1&status=1&search=关键词")
+  .then((response) => response.json())
+  .then((data) => {
     console.log(data);
     // {
     //   "code": 1,
@@ -266,7 +306,7 @@ fetch('/api/admin/vods?page=2&limit=20&type_id=1&status=1&search=关键词')
 
 ```bash
 # 下载最新版本的 Linux 二进制包
-wget https://github.com/your-repo/maccms_rust/releases/latest/download/linux.zip
+wget https://github.com/TFTG-CLOUD/maccms-rust/releases/latest/download/linux.zip
 
 # 解压到目标目录
 sudo mkdir -p /opt/maccms_rust
@@ -282,6 +322,7 @@ sudo nano .env
 ```
 
 配置文件内容：
+
 ```env
 # 数据库连接
 DATABASE_URL=mongodb://localhost:27017/maccms_rust
@@ -333,11 +374,13 @@ tail -f maccms.log
 **方式二：使用 systemctl 服务管理（推荐）**
 
 创建 systemd 服务文件：
+
 ```bash
 sudo nano /etc/systemd/system/maccms-rust.service
 ```
 
 服务配置内容：
+
 ```ini
 [Unit]
 Description=MacCMS Rust Edition
@@ -369,6 +412,7 @@ WantedBy=multi-user.target
 ```
 
 启动和管理服务：
+
 ```bash
 # 重新加载 systemd 配置
 sudo systemctl daemon-reload
@@ -455,13 +499,13 @@ WantedBy=multi-user.target
 server {
     listen 80;
     server_name your-domain.com;
-    
+
     location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
-    
+
     location /static {
         alias /opt/maccms_rust/static;
         expires 30d;
@@ -556,10 +600,7 @@ RUST_LOG=info cargo run > maccms.log 2>&1
 
 ### 从 MacCMS PHP 版本迁移
 
-1. **数据迁移**: 直接使用原版 MongoDB 数据库
-2. **配置迁移**: 复制相关配置文件
-3. **模板迁移**: 模板文件需要适配 Tera 语法
-4. **插件迁移**: 需要重新开发为 Rust 版本
+1. **数据迁移**: 直接使用原版 maccms 提供的采集 API 进行数据迁移
 
 ### 版本升级
 
