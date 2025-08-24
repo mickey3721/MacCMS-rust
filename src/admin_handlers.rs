@@ -1,12 +1,16 @@
-use actix_web::{web, HttpResponse, Responder};
-use mongodb::{Database, bson::doc, options::{FindOptions, FindOneOptions}};
-use futures::stream::TryStreamExt;
-use serde::{Serialize, Deserialize};
 use actix_session::Session;
+use actix_web::{web, HttpResponse, Responder};
+use futures::stream::TryStreamExt;
+use mongodb::{
+    bson::doc,
+    options::{FindOneOptions, FindOptions},
+    Database,
+};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::models::{Type, Binding, Config, Collection, Vod};
-use crate::index_manager::IndexManager;
+use crate::index_manager::{IndexManager, CollectionIndexInfo, SingleIndexInfo};
+use crate::models::{Binding, Collection, Config, Type, Vod};
 
 // Helper function to check if user is authenticated
 fn check_auth(session: &Session) -> Result<(), HttpResponse> {
@@ -15,11 +19,11 @@ fn check_auth(session: &Session) -> Result<(), HttpResponse> {
         _ => Err(HttpResponse::Unauthorized().json(json!({
             "error": "Unauthorized",
             "message": "Please login to access this resource"
-        })))
+        }))),
     }
 }
 
-// --- DTOs for Admin API --- 
+// --- DTOs for Admin API ---
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TypeRequest {
     pub type_name: String,
@@ -93,7 +97,7 @@ pub struct BatchDeleteRequest {
     pub ids: Vec<String>,
 }
 
-// --- Category Management API --- 
+// --- Category Management API ---
 
 // GET /api/admin/types
 pub async fn get_types(db: web::Data<Database>, session: Session) -> impl Responder {
@@ -101,7 +105,7 @@ pub async fn get_types(db: web::Data<Database>, session: Session) -> impl Respon
         return response;
     }
     let collection = db.collection::<Type>("types");
-    let find_options = FindOptions::builder().sort(doc!{"type_sort": 1}).build();
+    let find_options = FindOptions::builder().sort(doc! {"type_sort": 1}).build();
 
     match collection.find(None, find_options).await {
         Ok(cursor) => {
@@ -123,11 +127,12 @@ pub async fn get_collections(db: web::Data<Database>, session: Session) -> impl 
         return response;
     }
     let collection = db.collection::<Collection>("collections");
-    let find_options = FindOptions::builder().sort(doc!{"created_at": -1}).build();
+    let find_options = FindOptions::builder().sort(doc! {"created_at": -1}).build();
 
     match collection.find(None, find_options).await {
         Ok(cursor) => {
-            let collections: Vec<Collection> = cursor.try_collect().await.unwrap_or_else(|_| vec![]);
+            let collections: Vec<Collection> =
+                cursor.try_collect().await.unwrap_or_else(|_| vec![]);
             HttpResponse::Ok().json(collections)
         }
         Err(e) => {
@@ -138,7 +143,11 @@ pub async fn get_collections(db: web::Data<Database>, session: Session) -> impl 
 }
 
 // POST /api/admin/collections
-pub async fn create_collection(db: web::Data<Database>, collection_req: web::Json<CollectionRequest>, session: Session) -> impl Responder {
+pub async fn create_collection(
+    db: web::Data<Database>,
+    collection_req: web::Json<CollectionRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -166,44 +175,65 @@ pub async fn create_collection(db: web::Data<Database>, collection_req: web::Jso
     };
 
     match collection.insert_one(new_collection, None).await {
-        Ok(_) => HttpResponse::Created().json(json!({"success": true, "message": "Collection created"})),
+        Ok(_) => {
+            HttpResponse::Created().json(json!({"success": true, "message": "Collection created"}))
+        }
         Err(e) => {
             eprintln!("Failed to create collection: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to create collection"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to create collection"}))
         }
     }
 }
 
 // POST /api/admin/collections/{id}/collect
-pub async fn start_collection_collect(path: web::Path<String>, db: web::Data<Database>, collect_req: Option<web::Json<CollectRequest>>, session: Session) -> impl Responder {
+pub async fn start_collection_collect(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    collect_req: Option<web::Json<CollectRequest>>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
 
     let collection_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
-        Err(_) => return HttpResponse::BadRequest().json(json!({"success": false, "message": "Invalid collection ID"})),
+        Err(_) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"success": false, "message": "Invalid collection ID"}))
+        }
     };
 
     // 获取采集源配置
-    let collection = match db.collection::<Collection>("collections")
-        .find_one(doc!{"_id": collection_id}, None)
-        .await {
-            Ok(Some(c)) => c,
-            Ok(None) => return HttpResponse::NotFound().json(json!({"success": false, "message": "Collection not found"})),
-            Err(e) => {
-                eprintln!("Failed to fetch collection: {}", e);
-                return HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to fetch collection"}));
-            }
-        };
+    let collection = match db
+        .collection::<Collection>("collections")
+        .find_one(doc! {"_id": collection_id}, None)
+        .await
+    {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return HttpResponse::NotFound()
+                .json(json!({"success": false, "message": "Collection not found"}))
+        }
+        Err(e) => {
+            eprintln!("Failed to fetch collection: {}", e);
+            return HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to fetch collection"}));
+        }
+    };
 
     // 检查是否有绑定的分类
     let bindings_collection = db.collection::<Binding>("bindings");
-    let bindings_count = match bindings_collection.count_documents(doc!{"source_flag": &collection.collect_name}, None).await {
+    let bindings_count = match bindings_collection
+        .count_documents(doc! {"source_flag": &collection.collect_name}, None)
+        .await
+    {
         Ok(count) => count,
         Err(e) => {
             eprintln!("Failed to count bindings: {}", e);
-            return HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to check bindings"}));
+            return HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to check bindings"}));
         }
     };
 
@@ -217,12 +247,14 @@ pub async fn start_collection_collect(path: web::Path<String>, db: web::Data<Dat
     }
 
     // 解析hours参数
-    let hours_text = collect_req.as_ref()
+    let hours_text = collect_req
+        .as_ref()
         .and_then(|req| req.hours)
         .map(|h| format!("采集任务已启动 ({}小时内)", h))
         .unwrap_or_else(|| "采集任务已启动 (全部数据)".to_string());
 
-    let hours_param = collect_req.as_ref()
+    let hours_param = collect_req
+        .as_ref()
         .and_then(|req| req.hours)
         .map(|h| h.to_string());
 
@@ -232,7 +264,14 @@ pub async fn start_collection_collect(path: web::Path<String>, db: web::Data<Dat
 
     // 启动后台采集任务
     tokio::spawn(async move {
-        if let Err(e) = crate::collect_handlers::start_batch_collect(&db, collection, hours_param, task_id_clone).await {
+        if let Err(e) = crate::collect_handlers::start_batch_collect(
+            &db,
+            collection,
+            hours_param,
+            task_id_clone,
+        )
+        .await
+        {
             eprintln!("Batch collect failed: {}", e);
         }
     });
@@ -251,7 +290,12 @@ pub struct CollectRequest {
 }
 
 // PUT /api/admin/collections/{id}
-pub async fn update_collection(path: web::Path<String>, db: web::Data<Database>, collection_req: web::Json<CollectionRequest>, session: Session) -> impl Responder {
+pub async fn update_collection(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    collection_req: web::Json<CollectionRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -282,17 +326,23 @@ pub async fn update_collection(path: web::Path<String>, db: web::Data<Database>,
         }
     };
 
-    match collection.update_one(doc!{"_id": collection_id}, update_doc, None).await {
+    match collection
+        .update_one(doc! {"_id": collection_id}, update_doc, None)
+        .await
+    {
         Ok(result) => {
             if result.matched_count > 0 {
-                HttpResponse::Ok().json(json!({"success": true, "message": "Collection updated successfully"}))
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Collection updated successfully"}))
             } else {
-                HttpResponse::NotFound().json(json!({"success": false, "message": "Collection not found"}))
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Collection not found"}))
             }
         }
         Err(e) => {
             eprintln!("Failed to update collection: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to update collection"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to update collection"}))
         }
     }
 }
@@ -304,16 +354,18 @@ pub async fn get_collect_progress(path: web::Path<String>, session: Session) -> 
     }
 
     let task_id = path.into_inner();
-    
+
     // 从内存中获取任务进度（简化版本）
-    let progress = crate::collect_handlers::get_task_progress(&task_id).await.unwrap_or(crate::collect_handlers::CollectProgress {
-        status: "not_found".to_string(),
-        current_page: 0,
-        total_pages: 0,
-        success: 0,
-        failed: 0,
-        log: "任务不存在".to_string(),
-    });
+    let progress = crate::collect_handlers::get_task_progress(&task_id)
+        .await
+        .unwrap_or(crate::collect_handlers::CollectProgress {
+            status: "not_found".to_string(),
+            current_page: 0,
+            total_pages: 0,
+            success: 0,
+            failed: 0,
+            log: "任务不存在".to_string(),
+        });
 
     HttpResponse::Ok().json(json!({
         "success": true,
@@ -329,7 +381,7 @@ pub async fn get_running_tasks(session: Session) -> impl Responder {
 
     // 获取所有运行中的任务（从collect_handlers中的全局存储获取）
     let tasks = crate::collect_handlers::get_all_running_tasks().await;
-    
+
     HttpResponse::Ok().json(json!({
         "success": true,
         "tasks": tasks
@@ -343,10 +395,10 @@ pub async fn stop_collect_task(path: web::Path<String>, session: Session) -> imp
     }
 
     let task_id = path.into_inner();
-    
+
     // 调用collect_handlers中的停止任务函数
     let stopped = crate::collect_handlers::stop_task(&task_id).await;
-    
+
     if stopped {
         HttpResponse::Ok().json(json!({
             "success": true,
@@ -361,7 +413,11 @@ pub async fn stop_collect_task(path: web::Path<String>, session: Session) -> imp
 }
 
 // DELETE /api/admin/collections/{id}
-pub async fn delete_collection(path: web::Path<String>, db: web::Data<Database>, session: Session) -> impl Responder {
+pub async fn delete_collection(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -371,17 +427,23 @@ pub async fn delete_collection(path: web::Path<String>, db: web::Data<Database>,
         Err(_) => return HttpResponse::BadRequest().body("Invalid collection ID"),
     };
 
-    match collection.delete_one(doc!{"_id": collection_id}, None).await {
+    match collection
+        .delete_one(doc! {"_id": collection_id}, None)
+        .await
+    {
         Ok(result) => {
             if result.deleted_count > 0 {
-                HttpResponse::Ok().json(json!({"success": true, "message": "Collection deleted successfully"}))
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Collection deleted successfully"}))
             } else {
-                HttpResponse::NotFound().json(json!({"success": false, "message": "Collection not found"}))
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Collection not found"}))
             }
         }
         Err(e) => {
             eprintln!("Failed to delete collection: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to delete collection"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to delete collection"}))
         }
     }
 }
@@ -398,7 +460,11 @@ pub struct VodsQuery {
 }
 
 // GET /api/admin/vods
-pub async fn get_vods_admin(db: web::Data<Database>, query: web::Query<VodsQuery>, session: Session) -> impl Responder {
+pub async fn get_vods_admin(
+    db: web::Data<Database>,
+    query: web::Query<VodsQuery>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -454,7 +520,7 @@ pub async fn get_vods_admin(db: web::Data<Database>, query: web::Query<VodsQuery
     match collection.find(filter_doc, find_options).await {
         Ok(cursor) => {
             let vods: Vec<Vod> = cursor.try_collect().await.unwrap_or_else(|_| vec![]);
-            
+
             HttpResponse::Ok().json(json!({
                 "code": 1,
                 "msg": "success",
@@ -479,7 +545,11 @@ pub async fn get_vods_admin(db: web::Data<Database>, query: web::Query<VodsQuery
 }
 
 // POST /api/admin/vods
-pub async fn create_vod(db: web::Data<Database>, vod_req: web::Json<VodRequest>, session: Session) -> impl Responder {
+pub async fn create_vod(
+    db: web::Data<Database>,
+    vod_req: web::Json<VodRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -524,7 +594,12 @@ pub async fn create_vod(db: web::Data<Database>, vod_req: web::Json<VodRequest>,
 }
 
 // PUT /api/admin/vods/{id}
-pub async fn update_vod(path: web::Path<String>, db: web::Data<Database>, vod_req: web::Json<VodRequest>, session: Session) -> impl Responder {
+pub async fn update_vod(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    vod_req: web::Json<VodRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -551,7 +626,10 @@ pub async fn update_vod(path: web::Path<String>, db: web::Data<Database>, vod_re
         }
     };
 
-    match collection.update_one(doc!{"_id": vod_id}, update_doc, None).await {
+    match collection
+        .update_one(doc! {"_id": vod_id}, update_doc, None)
+        .await
+    {
         Ok(result) => {
             if result.matched_count > 0 {
                 HttpResponse::Ok().json(json!({
@@ -576,7 +654,11 @@ pub async fn update_vod(path: web::Path<String>, db: web::Data<Database>, vod_re
 }
 
 // DELETE /api/admin/vods/{id}
-pub async fn delete_vod(path: web::Path<String>, db: web::Data<Database>, session: Session) -> impl Responder {
+pub async fn delete_vod(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -586,35 +668,38 @@ pub async fn delete_vod(path: web::Path<String>, db: web::Data<Database>, sessio
         Err(_) => return HttpResponse::BadRequest().body("Invalid video ID"),
     };
 
-    match collection.delete_one(doc!{"_id": vod_id}, None).await {
+    match collection.delete_one(doc! {"_id": vod_id}, None).await {
         Ok(result) => {
             if result.deleted_count > 0 {
-                HttpResponse::Ok().json(json!({"success": true, "message": "Video deleted successfully"}))
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Video deleted successfully"}))
             } else {
-                HttpResponse::NotFound().json(json!({"success": false, "message": "Video not found"}))
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Video not found"}))
             }
         }
         Err(e) => {
             eprintln!("Failed to delete video: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to delete video"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to delete video"}))
         }
     }
 }
 
 // DELETE /api/admin/vods/batch
 pub async fn batch_delete_vods(
-    db: web::Data<Database>, 
-    batch_req: web::Json<BatchDeleteRequest>, 
-    session: Session
+    db: web::Data<Database>,
+    batch_req: web::Json<BatchDeleteRequest>,
+    session: Session,
 ) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
-    
+
     let collection = db.collection::<Vod>("vods");
     let mut object_ids = Vec::new();
     let mut invalid_ids = Vec::new();
-    
+
     // Parse all IDs and separate valid from invalid
     for id_str in &batch_req.ids {
         match mongodb::bson::oid::ObjectId::parse_str(id_str) {
@@ -622,7 +707,7 @@ pub async fn batch_delete_vods(
             Err(_) => invalid_ids.push(id_str.clone()),
         }
     }
-    
+
     if object_ids.is_empty() {
         return HttpResponse::BadRequest().json(json!({
             "success": false,
@@ -630,9 +715,12 @@ pub async fn batch_delete_vods(
             "invalid_ids": invalid_ids
         }));
     }
-    
+
     // Delete all valid videos
-    match collection.delete_many(doc!{"_id": {"$in": object_ids}}, None).await {
+    match collection
+        .delete_many(doc! {"_id": {"$in": object_ids}}, None)
+        .await
+    {
         Ok(result) => {
             let response = json!({
                 "success": true,
@@ -662,7 +750,7 @@ pub async fn get_configs(db: web::Data<Database>, session: Session) -> impl Resp
         return response;
     }
     let collection = db.collection::<Config>("configs");
-    let find_options = FindOptions::builder().sort(doc!{"config_sort": 1}).build();
+    let find_options = FindOptions::builder().sort(doc! {"config_sort": 1}).build();
 
     match collection.find(None, find_options).await {
         Ok(cursor) => {
@@ -677,14 +765,21 @@ pub async fn get_configs(db: web::Data<Database>, session: Session) -> impl Resp
 }
 
 // GET /api/admin/configs/{key}
-pub async fn get_config_by_key(path: web::Path<String>, db: web::Data<Database>, session: Session) -> impl Responder {
+pub async fn get_config_by_key(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
     let collection = db.collection::<Config>("configs");
     let config_key = path.into_inner();
 
-    match collection.find_one(doc!{"config_key": &config_key}, None).await {
+    match collection
+        .find_one(doc! {"config_key": &config_key}, None)
+        .await
+    {
         Ok(Some(config)) => HttpResponse::Ok().json(config),
         Ok(None) => HttpResponse::NotFound().body("Config not found"),
         Err(e) => {
@@ -695,7 +790,11 @@ pub async fn get_config_by_key(path: web::Path<String>, db: web::Data<Database>,
 }
 
 // POST /api/admin/configs
-pub async fn create_config(db: web::Data<Database>, config_req: web::Json<ConfigRequest>, session: Session) -> impl Responder {
+pub async fn create_config(
+    db: web::Data<Database>,
+    config_req: web::Json<ConfigRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -713,20 +812,29 @@ pub async fn create_config(db: web::Data<Database>, config_req: web::Json<Config
     };
 
     match collection.insert_one(new_config, None).await {
-        Ok(_) => HttpResponse::Created().json(json!({"success": true, "message": "Config created"})),
+        Ok(_) => {
+            HttpResponse::Created().json(json!({"success": true, "message": "Config created"}))
+        }
         Err(e) => {
             if e.to_string().contains("E11000 duplicate key error") {
-                HttpResponse::Conflict().json(json!({"success": false, "message": "Config key already exists"}))
+                HttpResponse::Conflict()
+                    .json(json!({"success": false, "message": "Config key already exists"}))
             } else {
                 eprintln!("Failed to create config: {}", e);
-                HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to create config"}))
+                HttpResponse::InternalServerError()
+                    .json(json!({"success": false, "message": "Failed to create config"}))
             }
         }
     }
 }
 
 // PUT /api/admin/configs/{key}
-pub async fn update_config(path: web::Path<String>, db: web::Data<Database>, config_req: web::Json<ConfigRequest>, session: Session) -> impl Responder {
+pub async fn update_config(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    config_req: web::Json<ConfigRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -744,46 +852,66 @@ pub async fn update_config(path: web::Path<String>, db: web::Data<Database>, con
         }
     };
 
-    match collection.update_one(doc!{"config_key": &config_key}, update_doc, None).await {
+    match collection
+        .update_one(doc! {"config_key": &config_key}, update_doc, None)
+        .await
+    {
         Ok(result) => {
             if result.matched_count > 0 {
-                HttpResponse::Ok().json(json!({"success": true, "message": "Config updated successfully"}))
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Config updated successfully"}))
             } else {
-                HttpResponse::NotFound().json(json!({"success": false, "message": "Config not found"}))
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Config not found"}))
             }
         }
         Err(e) => {
             eprintln!("Failed to update config: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to update config"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to update config"}))
         }
     }
 }
 
 // DELETE /api/admin/configs/{key}
-pub async fn delete_config(path: web::Path<String>, db: web::Data<Database>, session: Session) -> impl Responder {
+pub async fn delete_config(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
     let collection = db.collection::<Config>("configs");
     let config_key = path.into_inner();
 
-    match collection.delete_one(doc!{"config_key": &config_key}, None).await {
+    match collection
+        .delete_one(doc! {"config_key": &config_key}, None)
+        .await
+    {
         Ok(result) => {
             if result.deleted_count > 0 {
-                HttpResponse::Ok().json(json!({"success": true, "message": "Config deleted successfully"}))
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Config deleted successfully"}))
             } else {
-                HttpResponse::NotFound().json(json!({"success": false, "message": "Config not found"}))
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Config not found"}))
             }
         }
         Err(e) => {
             eprintln!("Failed to delete config: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to delete config"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to delete config"}))
         }
     }
 }
 
 // POST /api/admin/types
-pub async fn create_type(db: web::Data<Database>, type_req: web::Json<TypeRequest>, session: Session) -> impl Responder {
+pub async fn create_type(
+    db: web::Data<Database>,
+    type_req: web::Json<TypeRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -792,7 +920,13 @@ pub async fn create_type(db: web::Data<Database>, type_req: web::Json<TypeReques
     // In a real system, you'd generate type_id and handle type_mid, etc.
     // For simplicity, let's assume type_id is auto-incremented or managed externally for now.
     // Or, query max type_id and increment.
-    let new_type_id = match collection.find_one(None, FindOneOptions::builder().sort(doc!{"type_id": -1}).build()).await {
+    let new_type_id = match collection
+        .find_one(
+            None,
+            FindOneOptions::builder().sort(doc! {"type_id": -1}).build(),
+        )
+        .await
+    {
         Ok(Some(last_type)) => last_type.type_id + 1,
         _ => 1, // Start from 1 if no types exist
     };
@@ -822,20 +956,29 @@ pub async fn create_type(db: web::Data<Database>, type_req: web::Json<TypeReques
         Ok(_) => HttpResponse::Created().json(json!({"success": true, "message": "Type created"})),
         Err(e) => {
             eprintln!("Failed to create type: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to create type"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to create type"}))
         }
     }
 }
 
 // PUT /api/admin/types/{id}
-pub async fn update_type(path: web::Path<String>, db: web::Data<Database>, type_req: web::Json<TypeRequest>, session: Session) -> impl Responder {
+pub async fn update_type(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    type_req: web::Json<TypeRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
     let collection = db.collection::<Type>("types");
     let type_id: i32 = match path.into_inner().parse() {
         Ok(id) => id,
-        Err(_) => return HttpResponse::BadRequest().json(json!({"success": false, "message": "Invalid type ID"})),
+        Err(_) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"success": false, "message": "Invalid type ID"}))
+        }
     };
 
     let mut update_fields = doc! {
@@ -864,54 +1007,104 @@ pub async fn update_type(path: web::Path<String>, db: web::Data<Database>, type_
     if let Some(ref type_title) = type_req.type_title {
         update_fields.insert("type_title", type_title);
     }
+    if let Some(ref subarea) = type_req.subarea {
+        update_fields.insert("subarea", subarea);
+    }
+    if let Some(ref subyear) = type_req.subyear {
+        update_fields.insert("subyear", subyear);
+    }
 
     let update_doc = doc! {
         "$set": update_fields
     };
 
-    match collection.update_one(doc!{"type_id": type_id}, update_doc, None).await {
+    match collection
+        .update_one(doc! {"type_id": type_id}, update_doc, None)
+        .await
+    {
         Ok(result) => {
             if result.matched_count > 0 {
-                HttpResponse::Ok().json(json!({"success": true, "message": "Type updated successfully"}))
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Type updated successfully"}))
             } else {
-                HttpResponse::NotFound().json(json!({"success": false, "message": "Type not found"}))
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Type not found"}))
             }
         }
         Err(e) => {
             eprintln!("Failed to update type: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to update type"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to update type"}))
         }
     }
 }
 
 // DELETE /api/admin/types/{id}
-pub async fn delete_type(path: web::Path<String>, db: web::Data<Database>, session: Session) -> impl Responder {
+pub async fn delete_type(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
     let collection = db.collection::<Type>("types");
     let type_id: i32 = match path.into_inner().parse() {
         Ok(id) => id,
-        Err(_) => return HttpResponse::BadRequest().json(json!({"success": false, "message": "Invalid type ID"})),
+        Err(_) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"success": false, "message": "Invalid type ID"}))
+        }
     };
 
-    match collection.delete_one(doc!{"type_id": type_id}, None).await {
+    match collection.delete_one(doc! {"type_id": type_id}, None).await {
         Ok(result) => {
             if result.deleted_count > 0 {
-                HttpResponse::Ok().json(json!({"success": true, "message": "Type deleted successfully"}))
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Type deleted successfully"}))
             } else {
-                HttpResponse::NotFound().json(json!({"success": false, "message": "Type not found"}))
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Type not found"}))
             }
         }
         Err(e) => {
             eprintln!("Failed to delete type: {}", e);
-            HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to delete type"}))
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to delete type"}))
         }
     }
 }
 
-// --- Binding Management API --- 
+// --- Binding Management API ---
+// DELETE /api/admin/bindings/{id}
+pub async fn delete_binding(
+    db: web::Data<Database>,
+    session: Session,
+    path: web::Path<String>,
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+    let collection = db.collection::<Binding>("bindings");
+    let binding_id = path.into_inner();
 
+    match collection.delete_one(doc! {"_id": binding_id}, None).await {
+        Ok(result) => {
+            if result.deleted_count > 0 {
+                HttpResponse::Ok()
+                    .json(json!({"success": true, "message": "Binding deleted successfully"}))
+            } else {
+                HttpResponse::NotFound()
+                    .json(json!({"success": false, "message": "Binding not found"}))
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to delete binding: {}", e);
+            HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to delete binding"}))
+        }
+    }
+}
 // GET /api/admin/bindings
 pub async fn get_bindings(db: web::Data<Database>, session: Session) -> impl Responder {
     if let Err(response) = check_auth(&session) {
@@ -932,35 +1125,52 @@ pub async fn get_bindings(db: web::Data<Database>, session: Session) -> impl Res
 }
 
 // GET /api/admin/collections/{id}/binding-status
-pub async fn get_collection_binding_status(path: web::Path<String>, db: web::Data<Database>, session: Session) -> impl Responder {
+pub async fn get_collection_binding_status(
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
 
     let collection_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
-        Err(_) => return HttpResponse::BadRequest().json(json!({"success": false, "message": "Invalid collection ID"})),
+        Err(_) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"success": false, "message": "Invalid collection ID"}))
+        }
     };
 
     // 获取采集源配置
-    let collection = match db.collection::<Collection>("collections")
-        .find_one(doc!{"_id": collection_id}, None)
-        .await {
-            Ok(Some(c)) => c,
-            Ok(None) => return HttpResponse::NotFound().json(json!({"success": false, "message": "Collection not found"})),
-            Err(e) => {
-                eprintln!("Failed to fetch collection: {}", e);
-                return HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to fetch collection"}));
-            }
-        };
+    let collection = match db
+        .collection::<Collection>("collections")
+        .find_one(doc! {"_id": collection_id}, None)
+        .await
+    {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return HttpResponse::NotFound()
+                .json(json!({"success": false, "message": "Collection not found"}))
+        }
+        Err(e) => {
+            eprintln!("Failed to fetch collection: {}", e);
+            return HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to fetch collection"}));
+        }
+    };
 
     // 检查是否有绑定的分类
     let bindings_collection = db.collection::<Binding>("bindings");
-    let bindings_count = match bindings_collection.count_documents(doc!{"source_flag": &collection.collect_name}, None).await {
+    let bindings_count = match bindings_collection
+        .count_documents(doc! {"source_flag": &collection.collect_name}, None)
+        .await
+    {
         Ok(count) => count,
         Err(e) => {
             eprintln!("Failed to count bindings: {}", e);
-            return HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to check bindings"}));
+            return HttpResponse::InternalServerError()
+                .json(json!({"success": false, "message": "Failed to check bindings"}));
         }
     };
 
@@ -980,7 +1190,11 @@ pub async fn get_collection_binding_status(path: web::Path<String>, db: web::Dat
 }
 
 // POST /api/admin/bindings
-pub async fn create_or_update_binding(db: web::Data<Database>, binding_req: web::Json<BindingRequest>, session: Session) -> impl Responder {
+pub async fn create_or_update_binding(
+    db: web::Data<Database>,
+    binding_req: web::Json<BindingRequest>,
+    session: Session,
+) -> impl Responder {
     if let Err(response) = check_auth(&session) {
         return response;
     }
@@ -990,7 +1204,10 @@ pub async fn create_or_update_binding(db: web::Data<Database>, binding_req: web:
 
     // Fetch local type name for the binding
     let type_collection = db.collection::<Type>("types");
-    let local_type_name = match type_collection.find_one(doc!{"type_id": binding_req.local_type_id}, None).await {
+    let local_type_name = match type_collection
+        .find_one(doc! {"type_id": binding_req.local_type_id}, None)
+        .await
+    {
         Ok(Some(t)) => t.type_name,
         _ => "Unknown Type".to_string(), // Default if type not found
     };
@@ -1007,27 +1224,34 @@ pub async fn create_or_update_binding(db: web::Data<Database>, binding_req: web:
     };
 
     match collection.insert_one(new_binding, None).await {
-        Ok(_) => HttpResponse::Created().json(json!({"success": true, "message": "Binding created/updated"})),
+        Ok(_) => HttpResponse::Created()
+            .json(json!({"success": true, "message": "Binding created/updated"})),
         Err(e) => {
             // If it's a duplicate key error, try to update instead (upsert behavior)
             if e.to_string().contains("E11000 duplicate key error") {
-                let update_doc = doc!{"$set": {
+                let update_doc = doc! {"$set": {
                     "source_flag": &binding_req.source_flag,
                     "external_id": &binding_req.external_id,
                     "local_type_id": binding_req.local_type_id,
                     "local_type_name": local_type_name.clone(),
                     "updated_at": mongodb::bson::DateTime::now()
                 }};
-                match collection.update_one(doc!{"_id": binding_id}, update_doc, None).await {
-                    Ok(_) => HttpResponse::Ok().json(json!({"success": true, "message": "Binding updated"})),
+                match collection
+                    .update_one(doc! {"_id": binding_id}, update_doc, None)
+                    .await
+                {
+                    Ok(_) => HttpResponse::Ok()
+                        .json(json!({"success": true, "message": "Binding updated"})),
                     Err(e) => {
                         eprintln!("Failed to update binding: {}", e);
-                        HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to update binding"}))
+                        HttpResponse::InternalServerError()
+                            .json(json!({"success": false, "message": "Failed to update binding"}))
                     }
                 }
             } else {
                 eprintln!("Failed to create binding: {}", e);
-                HttpResponse::InternalServerError().json(json!({"success": false, "message": "Failed to create binding"}))
+                HttpResponse::InternalServerError()
+                    .json(json!({"success": false, "message": "Failed to create binding"}))
             }
         }
     }
@@ -1040,9 +1264,9 @@ pub async fn create_indexes(db: web::Data<Database>, session: Session) -> impl R
     if let Err(response) = check_auth(&session) {
         return response;
     }
-    
+
     let index_manager = IndexManager::new(db.get_ref().clone());
-    
+
     match index_manager.create_all_indexes().await {
         Ok(_) => HttpResponse::Ok().json(json!({
             "success": true,
@@ -1051,7 +1275,7 @@ pub async fn create_indexes(db: web::Data<Database>, session: Session) -> impl R
         Err(e) => HttpResponse::InternalServerError().json(json!({
             "success": false,
             "message": format!("索引创建失败: {}", e)
-        }))
+        })),
     }
 }
 
@@ -1060,9 +1284,9 @@ pub async fn get_index_status(db: web::Data<Database>, session: Session) -> impl
     if let Err(response) = check_auth(&session) {
         return response;
     }
-    
+
     let index_manager = IndexManager::new(db.get_ref().clone());
-    
+
     match index_manager.verify_indexes().await {
         Ok(_) => HttpResponse::Ok().json(json!({
             "success": true,
@@ -1071,7 +1295,7 @@ pub async fn get_index_status(db: web::Data<Database>, session: Session) -> impl
         Err(e) => HttpResponse::Ok().json(json!({
             "success": false,
             "message": format!("索引验证失败: {}", e)
-        }))
+        })),
     }
 }
 
@@ -1080,9 +1304,9 @@ pub async fn list_indexes(db: web::Data<Database>, session: Session) -> impl Res
     if let Err(response) = check_auth(&session) {
         return response;
     }
-    
+
     let index_manager = IndexManager::new(db.get_ref().clone());
-    
+
     // 使用IndexManager的show_index_status方法获取索引信息
     match index_manager.show_index_status().await {
         Ok(_) => {
@@ -1095,7 +1319,26 @@ pub async fn list_indexes(db: web::Data<Database>, session: Session) -> impl Res
         Err(e) => HttpResponse::InternalServerError().json(json!({
             "success": false,
             "message": format!("获取索引状态失败: {}", e)
-        }))
+        })),
+    }
+}
+
+// GET /api/admin/indexes/data
+pub async fn get_indexes_data(db: web::Data<Database>, session: Session) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+
+    let index_manager = IndexManager::new(db.get_ref().clone());
+    match index_manager.get_all_indexes().await {
+        Ok(indexes) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "data": indexes
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "success": false,
+            "message": format!("获取索引数据失败: {}", e)
+        })),
     }
 }
 
@@ -1118,38 +1361,56 @@ pub async fn get_statistics(db: web::Data<Database>, session: Session) -> impl R
     });
 
     // 获取视频数量
-    if let Ok(count) = db.collection::<mongodb::bson::Document>("vods")
-        .count_documents(None, None).await {
+    if let Ok(count) = db
+        .collection::<mongodb::bson::Document>("vods")
+        .count_documents(None, None)
+        .await
+    {
         stats["data"]["vods"] = count.into();
     }
 
     // 获取分类数量
-    if let Ok(count) = db.collection::<mongodb::bson::Document>("types")
-        .count_documents(None, None).await {
+    if let Ok(count) = db
+        .collection::<mongodb::bson::Document>("types")
+        .count_documents(None, None)
+        .await
+    {
         stats["data"]["types"] = count.into();
     }
 
     // 获取采集源数量
-    if let Ok(count) = db.collection::<mongodb::bson::Document>("collections")
-        .count_documents(None, None).await {
+    if let Ok(count) = db
+        .collection::<mongodb::bson::Document>("collections")
+        .count_documents(None, None)
+        .await
+    {
         stats["data"]["collections"] = count.into();
     }
 
     // 获取绑定数量
-    if let Ok(count) = db.collection::<mongodb::bson::Document>("bindings")
-        .count_documents(None, None).await {
+    if let Ok(count) = db
+        .collection::<mongodb::bson::Document>("bindings")
+        .count_documents(None, None)
+        .await
+    {
         stats["data"]["bindings"] = count.into();
     }
 
     // 获取配置数量
-    if let Ok(count) = db.collection::<mongodb::bson::Document>("configs")
-        .count_documents(None, None).await {
+    if let Ok(count) = db
+        .collection::<mongodb::bson::Document>("configs")
+        .count_documents(None, None)
+        .await
+    {
         stats["data"]["configs"] = count.into();
     }
 
     // 获取用户数量
-    if let Ok(count) = db.collection::<mongodb::bson::Document>("users")
-        .count_documents(None, None).await {
+    if let Ok(count) = db
+        .collection::<mongodb::bson::Document>("users")
+        .count_documents(None, None)
+        .await
+    {
         stats["data"]["users"] = count.into();
     }
 

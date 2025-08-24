@@ -1,18 +1,20 @@
-use mongodb::{Database, bson::doc};
-use crate::models::{Config, Type, Vod, Collection, Binding, PlaySource, PlayUrl};
+use crate::models::{Binding, Collection, Config, PlaySource, PlayUrl, Type, Vod};
 use mongodb::bson::DateTime;
+use mongodb::{bson::doc, Database};
 
 // 检查配置是否已存在
 async fn config_exists(db: &Database, config_key: &str) -> Result<bool, mongodb::error::Error> {
     let collection = db.collection::<Config>("configs");
-    let count = collection.count_documents(doc! { "config_key": config_key }, None).await?;
+    let count = collection
+        .count_documents(doc! { "config_key": config_key }, None)
+        .await?;
     Ok(count > 0)
 }
 
 // 初始化网站基本配置
 pub async fn init_website_config(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Config>("configs");
-    
+
     let configs = vec![
         Config {
             id: None,
@@ -65,9 +67,9 @@ pub async fn init_website_config(db: &Database) -> Result<(), Box<dyn std::error
             updated_at: DateTime::now(),
         },
     ];
-    
+
     let mut created_count = 0;
-    
+
     for config in configs {
         // 先检查配置是否已存在
         match config_exists(db, &config.config_key).await {
@@ -88,8 +90,10 @@ pub async fn init_website_config(db: &Database) -> Result<(), Box<dyn std::error
                         "updated_at": config.updated_at,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
                 println!("✅ 创建配置: {}", config.config_key);
                 created_count += 1;
@@ -109,15 +113,17 @@ pub async fn init_website_config(db: &Database) -> Result<(), Box<dyn std::error
                         "updated_at": config.updated_at,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
                 println!("✅ 创建配置（检查失败）: {}", config.config_key);
                 created_count += 1;
             }
         }
     }
-    
+
     if created_count > 0 {
         println!("网站配置初始化完成，新增 {} 个配置", created_count);
     } else {
@@ -129,14 +135,16 @@ pub async fn init_website_config(db: &Database) -> Result<(), Box<dyn std::error
 // 检查分类是否已存在
 async fn type_exists(db: &Database, type_id: i32) -> Result<bool, mongodb::error::Error> {
     let collection = db.collection::<Type>("types");
-    let count = collection.count_documents(doc! { "type_id": type_id }, None).await?;
+    let count = collection
+        .count_documents(doc! { "type_id": type_id }, None)
+        .await?;
     Ok(count > 0)
 }
 
 // 初始化测试分类数据
 pub async fn init_test_categories(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Type>("types");
-    
+
     let categories = vec![
         // 一级分类
         Type {
@@ -261,14 +269,17 @@ pub async fn init_test_categories(db: &Database) -> Result<(), Box<dyn std::erro
             subyear: None,
         },
     ];
-    
+
     let mut created_count = 0;
-    
+
     for category in categories {
         // 先检查分类是否已存在
         match type_exists(db, category.type_id).await {
             Ok(true) => {
-                println!("⚪ 分类已存在，跳过: {} (ID: {})", category.type_name, category.type_id);
+                println!(
+                    "⚪ 分类已存在，跳过: {} (ID: {})",
+                    category.type_name, category.type_id
+                );
             }
             Ok(false) => {
                 // 分类不存在，创建它
@@ -289,14 +300,22 @@ pub async fn init_test_categories(db: &Database) -> Result<(), Box<dyn std::erro
                         "subyear": &category.subyear,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
-                println!("✅ 创建分类: {} (ID: {})", category.type_name, category.type_id);
+                println!(
+                    "✅ 创建分类: {} (ID: {})",
+                    category.type_name, category.type_id
+                );
                 created_count += 1;
             }
             Err(e) => {
-                eprintln!("❌ 检查分类存在性失败: {} (ID: {}): {}", category.type_name, category.type_id, e);
+                eprintln!(
+                    "❌ 检查分类存在性失败: {} (ID: {}): {}",
+                    category.type_name, category.type_id, e
+                );
                 // 继续尝试创建
                 let filter = doc! { "type_id": category.type_id };
                 let update = doc! {
@@ -315,15 +334,20 @@ pub async fn init_test_categories(db: &Database) -> Result<(), Box<dyn std::erro
                         "subyear": &category.subyear,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
-                println!("✅ 创建分类（检查失败）: {} (ID: {})", category.type_name, category.type_id);
+                println!(
+                    "✅ 创建分类（检查失败）: {} (ID: {})",
+                    category.type_name, category.type_id
+                );
                 created_count += 1;
             }
         }
     }
-    
+
     if created_count > 0 {
         println!("测试分类数据初始化完成，新增 {} 个分类", created_count);
     } else {
@@ -335,14 +359,16 @@ pub async fn init_test_categories(db: &Database) -> Result<(), Box<dyn std::erro
 // 检查视频是否已存在
 async fn vod_exists(db: &Database, vod_name: &str) -> Result<bool, mongodb::error::Error> {
     let collection = db.collection::<Vod>("vods");
-    let count = collection.count_documents(doc! { "vod_name": vod_name }, None).await?;
+    let count = collection
+        .count_documents(doc! { "vod_name": vod_name }, None)
+        .await?;
     Ok(count > 0)
 }
 
 // 初始化测试视频数据
 pub async fn init_test_videos(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Vod>("vods");
-    
+
     let videos = vec![
         Vod {
             id: None,
@@ -358,23 +384,21 @@ pub async fn init_test_videos(db: &Database) -> Result<(), Box<dyn std::error::E
             vod_area: Some("美国".to_string()),
             vod_lang: Some("英语".to_string()),
             vod_year: Some("2019".to_string()),
-            vod_content: Some("漫威电影宇宙的史诗级终章，超级英雄们为了拯救宇宙而展开最后的战斗。".to_string()),
+            vod_content: Some(
+                "漫威电影宇宙的史诗级终章，超级英雄们为了拯救宇宙而展开最后的战斗。".to_string(),
+            ),
             vod_hits: Some(0),
             vod_hits_day: Some(0),
             vod_hits_week: Some(0),
             vod_hits_month: Some(0),
             vod_score: Some("9.2".to_string()),
-            vod_play_urls: vec![
-                PlaySource {
-                    source_name: "高清播放".to_string(),
-                    urls: vec![
-                        PlayUrl {
-                            name: "第01集".to_string(),
-                            url: "https://example.com/video/avengers4.m3u8".to_string(),
-                        }
-                    ],
-                }
-            ],
+            vod_play_urls: vec![PlaySource {
+                source_name: "高清播放".to_string(),
+                urls: vec![PlayUrl {
+                    name: "第01集".to_string(),
+                    url: "https://example.com/video/avengers4.m3u8".to_string(),
+                }],
+            }],
         },
         Vod {
             id: None,
@@ -390,23 +414,21 @@ pub async fn init_test_videos(db: &Database) -> Result<(), Box<dyn std::error::E
             vod_area: Some("中国".to_string()),
             vod_lang: Some("中文".to_string()),
             vod_year: Some("2019".to_string()),
-            vod_content: Some("太阳即将毁灭，人类在地球表面建造出巨大的推进器，寻找新的家园。".to_string()),
+            vod_content: Some(
+                "太阳即将毁灭，人类在地球表面建造出巨大的推进器，寻找新的家园。".to_string(),
+            ),
             vod_hits: Some(0),
             vod_hits_day: Some(0),
             vod_hits_week: Some(0),
             vod_hits_month: Some(0),
             vod_score: Some("8.8".to_string()),
-            vod_play_urls: vec![
-                PlaySource {
-                    source_name: "高清播放".to_string(),
-                    urls: vec![
-                        PlayUrl {
-                            name: "第01集".to_string(),
-                            url: "https://example.com/video/wandering_earth.m3u8".to_string(),
-                        }
-                    ],
-                }
-            ],
+            vod_play_urls: vec![PlaySource {
+                source_name: "高清播放".to_string(),
+                urls: vec![PlayUrl {
+                    name: "第01集".to_string(),
+                    url: "https://example.com/video/wandering_earth.m3u8".to_string(),
+                }],
+            }],
         },
         Vod {
             id: None,
@@ -428,22 +450,18 @@ pub async fn init_test_videos(db: &Database) -> Result<(), Box<dyn std::error::E
             vod_hits_week: Some(0),
             vod_hits_month: Some(0),
             vod_score: Some("8.5".to_string()),
-            vod_play_urls: vec![
-                PlaySource {
-                    source_name: "高清播放".to_string(),
-                    urls: vec![
-                        PlayUrl {
-                            name: "第01集".to_string(),
-                            url: "https://example.com/video/hello_mom.m3u8".to_string(),
-                        }
-                    ],
-                }
-            ],
+            vod_play_urls: vec![PlaySource {
+                source_name: "高清播放".to_string(),
+                urls: vec![PlayUrl {
+                    name: "第01集".to_string(),
+                    url: "https://example.com/video/hello_mom.m3u8".to_string(),
+                }],
+            }],
         },
     ];
-    
+
     let mut created_count = 0;
-    
+
     for video in videos {
         // 先检查视频是否已存在
         match vod_exists(db, &video.vod_name).await {
@@ -471,8 +489,10 @@ pub async fn init_test_videos(db: &Database) -> Result<(), Box<dyn std::error::E
                         "vod_play_urls": mongodb::bson::to_bson(&video.vod_play_urls).unwrap(),
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
                 println!("✅ 创建视频: {}", video.vod_name);
                 created_count += 1;
@@ -499,15 +519,17 @@ pub async fn init_test_videos(db: &Database) -> Result<(), Box<dyn std::error::E
                         "vod_play_urls": mongodb::bson::to_bson(&video.vod_play_urls).unwrap(),
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
                 println!("✅ 创建视频（检查失败）: {}", video.vod_name);
                 created_count += 1;
             }
         }
     }
-    
+
     if created_count > 0 {
         println!("测试视频数据初始化完成，新增 {} 个视频", created_count);
     } else {
@@ -517,16 +539,21 @@ pub async fn init_test_videos(db: &Database) -> Result<(), Box<dyn std::error::E
 }
 
 // 检查采集源是否已存在
-async fn collection_exists(db: &Database, collect_name: &str) -> Result<bool, mongodb::error::Error> {
+async fn collection_exists(
+    db: &Database,
+    collect_name: &str,
+) -> Result<bool, mongodb::error::Error> {
     let collection = db.collection::<Collection>("collections");
-    let count = collection.count_documents(doc! { "collect_name": collect_name }, None).await?;
+    let count = collection
+        .count_documents(doc! { "collect_name": collect_name }, None)
+        .await?;
     Ok(count > 0)
 }
 
 // 初始化采集源数据
 pub async fn init_collection_sources(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Collection>("collections");
-    
+
     let collections = vec![
         Collection {
             id: None,
@@ -542,7 +569,7 @@ pub async fn init_collection_sources(db: &Database) -> Result<(), Box<dyn std::e
             collect_opt: 0,
             collect_sync_pic_opt: 1,
             collect_remove_ad: 1,
-            collect_convert_webp: 1, // 启用webp转换
+            collect_convert_webp: 1,   // 启用webp转换
             collect_download_retry: 3, // 重试3次
             collect_status: 1,
             created_at: DateTime::now(),
@@ -562,16 +589,16 @@ pub async fn init_collection_sources(db: &Database) -> Result<(), Box<dyn std::e
             collect_opt: 0,
             collect_sync_pic_opt: 1,
             collect_remove_ad: 1,
-            collect_convert_webp: 1, // 启用webp转换
+            collect_convert_webp: 1,   // 启用webp转换
             collect_download_retry: 3, // 重试3次
             collect_status: 1,
             created_at: DateTime::now(),
             updated_at: DateTime::now(),
         },
     ];
-    
+
     let mut created_count = 0;
-    
+
     for collect in collections {
         // 先检查采集源是否已存在
         match collection_exists(db, &collect.collect_name).await {
@@ -602,8 +629,10 @@ pub async fn init_collection_sources(db: &Database) -> Result<(), Box<dyn std::e
                         "updated_at": collect.updated_at,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
                 println!("✅ 创建采集源: {}", collect.collect_name);
                 created_count += 1;
@@ -633,15 +662,17 @@ pub async fn init_collection_sources(db: &Database) -> Result<(), Box<dyn std::e
                         "updated_at": collect.updated_at,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
                 println!("✅ 创建采集源（检查失败）: {}", collect.collect_name);
                 created_count += 1;
             }
         }
     }
-    
+
     if created_count > 0 {
         println!("采集源数据初始化完成，新增 {} 个采集源", created_count);
     } else {
@@ -653,7 +684,9 @@ pub async fn init_collection_sources(db: &Database) -> Result<(), Box<dyn std::e
 // 检查绑定是否已存在
 async fn binding_exists(db: &Database, binding_id: &str) -> Result<bool, mongodb::error::Error> {
     let collection = db.collection::<Binding>("bindings");
-    let count = collection.count_documents(doc! { "_id": binding_id }, None).await?;
+    let count = collection
+        .count_documents(doc! { "_id": binding_id }, None)
+        .await?;
     Ok(count > 0)
 }
 
@@ -661,14 +694,14 @@ async fn binding_exists(db: &Database, binding_id: &str) -> Result<bool, mongodb
 pub async fn init_bindings(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Binding>("bindings");
     let now = DateTime::now();
-    
+
     // 模拟PHP采集管理中的绑定关系：采集源标识_外部分类ID => 本地分类ID
     let bindings = vec![
         Binding {
             id: "7a4856e7b6a1e1a2580a9b69cdc7233c_5".to_string(), // 模拟PHP中的绑定格式
             source_flag: "7a4856e7b6a1e1a2580a9b69cdc7233c".to_string(), // 采集源标识
-            external_id: "5".to_string(), // 外部分类ID
-            local_type_id: 6, // 本地分类ID
+            external_id: "5".to_string(),                         // 外部分类ID
+            local_type_id: 6,                                     // 本地分类ID
             local_type_name: "动作片".to_string(),
             created_at: now,
             updated_at: now,
@@ -692,14 +725,17 @@ pub async fn init_bindings(db: &Database) -> Result<(), Box<dyn std::error::Erro
             updated_at: now,
         },
     ];
-    
+
     let mut created_count = 0;
-    
+
     for binding in bindings {
         // 先检查绑定是否已存在
         match binding_exists(db, &binding.id).await {
             Ok(true) => {
-                println!("⚪ 绑定已存在，跳过: {} -> {}", binding.source_flag, binding.local_type_name);
+                println!(
+                    "⚪ 绑定已存在，跳过: {} -> {}",
+                    binding.source_flag, binding.local_type_name
+                );
             }
             Ok(false) => {
                 // 绑定不存在，创建它
@@ -715,14 +751,22 @@ pub async fn init_bindings(db: &Database) -> Result<(), Box<dyn std::error::Erro
                         "updated_at": binding.updated_at,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
-                println!("✅ 创建绑定: {} -> {}", binding.source_flag, binding.local_type_name);
+                println!(
+                    "✅ 创建绑定: {} -> {}",
+                    binding.source_flag, binding.local_type_name
+                );
                 created_count += 1;
             }
             Err(e) => {
-                eprintln!("❌ 检查绑定存在性失败: {} -> {}: {}", binding.source_flag, binding.local_type_name, e);
+                eprintln!(
+                    "❌ 检查绑定存在性失败: {} -> {}: {}",
+                    binding.source_flag, binding.local_type_name, e
+                );
                 // 继续尝试创建
                 let filter = doc! { "_id": &binding.id };
                 let update = doc! {
@@ -736,15 +780,20 @@ pub async fn init_bindings(db: &Database) -> Result<(), Box<dyn std::error::Erro
                         "updated_at": binding.updated_at,
                     }
                 };
-                
-                let options = mongodb::options::UpdateOptions::builder().upsert(true).build();
+
+                let options = mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
                 collection.update_one(filter, update, options).await?;
-                println!("✅ 创建绑定（检查失败）: {} -> {}", binding.source_flag, binding.local_type_name);
+                println!(
+                    "✅ 创建绑定（检查失败）: {} -> {}",
+                    binding.source_flag, binding.local_type_name
+                );
                 created_count += 1;
             }
         }
     }
-    
+
     if created_count > 0 {
         println!("绑定数据初始化完成，新增 {} 个绑定", created_count);
     } else {
@@ -756,13 +805,19 @@ pub async fn init_bindings(db: &Database) -> Result<(), Box<dyn std::error::Erro
 // 检查数据库是否为空（没有任何数据）
 async fn is_database_empty(db: &Database) -> Result<bool, Box<dyn std::error::Error>> {
     // 检查主要集合是否都为空
-    let configs_count = db.collection::<mongodb::bson::Document>("configs")
-        .count_documents(None, None).await?;
-    let types_count = db.collection::<mongodb::bson::Document>("types")
-        .count_documents(None, None).await?;
-    let vods_count = db.collection::<mongodb::bson::Document>("vods")
-        .count_documents(None, None).await?;
-    
+    let configs_count = db
+        .collection::<mongodb::bson::Document>("configs")
+        .count_documents(None, None)
+        .await?;
+    let types_count = db
+        .collection::<mongodb::bson::Document>("types")
+        .count_documents(None, None)
+        .await?;
+    let vods_count = db
+        .collection::<mongodb::bson::Document>("vods")
+        .count_documents(None, None)
+        .await?;
+
     // 如果所有主要集合都为空，则认为数据库是空的
     Ok(configs_count == 0 && types_count == 0 && vods_count == 0)
 }
@@ -773,13 +828,13 @@ pub async fn init_all_data(db: &Database) -> Result<(), Box<dyn std::error::Erro
     match is_database_empty(db).await {
         Ok(true) => {
             println!("数据库为空，开始初始化数据...");
-            
+
             init_website_config(db).await?;
             init_test_categories(db).await?;
             init_test_videos(db).await?;
             init_collection_sources(db).await?;
             init_bindings(db).await?;
-            
+
             println!("所有数据初始化完成！");
         }
         Ok(false) => {
@@ -789,6 +844,6 @@ pub async fn init_all_data(db: &Database) -> Result<(), Box<dyn std::error::Erro
             eprintln!("检查数据库状态失败: {}，跳过初始化", e);
         }
     }
-    
+
     Ok(())
 }

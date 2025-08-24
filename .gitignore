@@ -1,2 +1,7 @@
 /target
 .DS_Store
+/static/images/*.jpg
+/static/images/*.png
+/static/images/*.gif
+/static/images/*.webp
+/static/images/*.jpeg

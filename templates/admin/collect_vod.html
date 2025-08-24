@@ -6,8 +6,8 @@
 <div class="p-6">
     <!-- 页面标题 -->
     <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">视频采集管理</h1>
-        <p class="mt-1 text-sm text-gray-600">从外部API采集视频数据并管理分类绑定</p>
+        <h1 class="text-2xl font-bold text-gray-900">采集绑定</h1>
+        <p class="mt-1 text-sm text-gray-600">管理视频分类绑定</p>
     </div>
 
     <!-- 采集源选择 -->
@@ -36,10 +36,6 @@
                 <button onclick="loadCategories()"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                     加载分类列表
-                </button>
-                <button onclick="loadVideoList()"
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                    加载视频列表
                 </button>
             </div>
         </div>
@@ -316,6 +312,8 @@
                 var categoryTypeId = category.type_id.toString();
                 return b.source_flag === currentCollection.flag && bExternalId === categoryTypeId;
             });
+            // console.log(binding);
+            // var bindingIdObject = binding.id;
 
             var row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
@@ -393,12 +391,13 @@
         fetch('/api/admin/bindings/' + bindingId, {
             method: 'DELETE'
         })
-            .then(function (response) {
-                if (response.ok) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     showToast('绑定删除成功', 'success');
                     loadBindings();
                 } else {
-                    showToast('绑定删除失败', 'error');
+                    showToast('绑定删除失败', data.message);
                 }
             })
             .catch(function (error) {
@@ -439,10 +438,26 @@
 
     // 加载视频列表
     function loadVideoList() {
-        if (!currentCollection) {
+        var collectionSelect = document.getElementById('collection-select');
+        if (!collectionSelect.value) {
             showToast('请先选择采集源', 'error');
             return;
         }
+
+        var selectedOption = collectionSelect.options[collectionSelect.selectedIndex];
+        var apiUrl = selectedOption.dataset.url;
+        var sourceFlag = selectedOption.dataset.flag;
+
+        currentCollection = {
+            id: collectionSelect.value,
+            url: apiUrl,
+            flag: sourceFlag,
+            name: selectedOption.text
+        };
+        // if (!currentCollection) {
+        //     showToast('请先选择采集源', 'error');
+        //     return;
+        // }
 
         var categoryId = document.getElementById('category-filter').value;
         var pageSize = parseInt(document.getElementById('page-size').value);
@@ -623,7 +638,7 @@
         }
 
         var data = {
-            collection_id: currentCollection._id['$oid'],
+            collection_id: currentCollection.id,
             source_flag: currentCollection.flag,
             api_url: currentCollection.url
         };

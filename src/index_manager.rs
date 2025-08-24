@@ -4,6 +4,22 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use futures::TryStreamExt;
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CollectionIndexInfo {
+    pub collection_name: String,
+    pub indexes: Vec<SingleIndexInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SingleIndexInfo {
+    pub name: String,
+    pub keys: HashMap<String, i32>,
+    pub unique: bool,
+    pub sparse: bool,
+    pub background: bool,
+    pub version: Option<i32>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IndexInfo {
     pub collection: String,
@@ -72,6 +88,18 @@ impl IndexManager {
                     keys
                 },
                 name: "vod_year_1".to_string(),
+                unique: None,
+                sparse: Some(true),
+                background: Some(true),
+            },
+            IndexInfo {
+                collection: "vods".to_string(),
+                keys: {
+                    let mut keys = HashMap::new();
+                    keys.insert("vod_area".to_string(), 1);
+                    keys
+                },
+                name: "vod_area_1".to_string(),
                 unique: None,
                 sparse: Some(true),
                 background: Some(true),
@@ -394,5 +422,66 @@ impl IndexManager {
         }
         
         Ok(())
+    }
+
+    /// 获取所有集合的索引信息
+    pub async fn get_all_indexes(&self) -> Result<Vec<CollectionIndexInfo>, Box<dyn std::error::Error>> {
+        let collections = vec!["vods", "types", "bindings", "collections", "configs"];
+        let mut result = Vec::new();
+        
+        for collection_name in collections {
+            let collection = self.db.collection::<mongodb::bson::Document>(collection_name);
+            
+            match collection.list_indexes(None).await {
+                Ok(mut cursor) => {
+                    let mut indexes = Vec::new();
+                    
+                    while let Ok(Some(index_model)) = cursor.try_next().await {
+                        let options = index_model.options.as_ref();
+                        
+                        // 跳过默认的_id索引
+                        if let Some(name) = options.and_then(|opts| opts.name.as_ref()) {
+                            if name == "_id_" {
+                                continue;
+                            }
+                        }
+                        
+                        // 解析索引键
+                        let mut keys = HashMap::new();
+                        for (key, value) in index_model.keys.iter() {
+                            if let Some(ival) = value.as_i32() {
+                                keys.insert(key.to_string(), ival);
+                            } else if let Some(bval) = value.as_i64() {
+                                keys.insert(key.to_string(), bval as i32);
+                            }
+                        }
+                        
+                        let index_info = SingleIndexInfo {
+                            name: options.and_then(|opts| opts.name.as_ref())
+                                .unwrap_or(&"unknown".to_string()).to_string(),
+                            keys,
+                            unique: options.and_then(|opts| opts.unique).unwrap_or(false),
+                            sparse: options.and_then(|opts| opts.sparse).unwrap_or(false),
+                            background: options.and_then(|opts| opts.background).unwrap_or(false),
+                            version: None, // 暂时设置为None，因为IndexVersion类型转换复杂
+                        };
+                        
+                        indexes.push(index_info);
+                    }
+                    
+                    let collection_info = CollectionIndexInfo {
+                        collection_name: collection_name.to_string(),
+                        indexes,
+                    };
+                    
+                    result.push(collection_info);
+                }
+                Err(e) => {
+                    eprintln!("❌ 获取集合 {} 索引失败: {}", collection_name, e);
+                }
+            }
+        }
+        
+        Ok(result)
     }
 }

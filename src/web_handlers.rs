@@ -416,12 +416,16 @@ pub async fn list_page_handler(
         context.insert("display_category", &display_category);
 
         if let Some(area) = &query.area {
-            filter.insert("vod_area", area);
-            context.insert("current_area", area);
+            if !area.is_empty() {
+                filter.insert("vod_area", area);
+                context.insert("current_area", area);
+            }
         }
         if let Some(year) = &query.year {
-            filter.insert("vod_year", year);
-            context.insert("current_year", year);
+            if !year.is_empty() {
+                filter.insert("vod_year", year);
+                context.insert("current_year", year);
+            }
         }
 
         // Pagination setup
@@ -464,6 +468,9 @@ pub async fn list_page_handler(
             Err(_) => vec![],
         };
         context.insert("vods", &vods);
+        
+        // Add total items count to context
+        context.insert("total_items", &total_items);
 
         // Add pagination info to context
         if total_pages > 1 {
