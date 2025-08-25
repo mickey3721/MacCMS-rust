@@ -22,6 +22,8 @@ MacCMS Rust Edition 是基于 Rust 语言重构的高性能视频内容管理系
 
 ## 🚀 快速开始
 
+如果是生产环境，建议安装了 mongodb 之后，直接使用 Release 包安装。
+
 ### 1. 环境准备
 
 ```bash
@@ -394,8 +396,6 @@ sudo nano /etc/systemd/system/maccms-rust.service
 ```ini
 [Unit]
 Description=MacCMS Rust Edition
-After=network.target mongodb.service
-Requires=mongodb.service
 
 [Service]
 Type=simple
