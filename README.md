@@ -385,6 +385,17 @@ tail -f maccms.log
 
 **方式二：使用 systemctl 服务管理（推荐）**
 
+创建服务用户（仅支持读写 maccms 文件夹）：
+
+```bash
+sudo useradd -r -s /bin/false -m -d /opt/maccms_rust maccms
+sudo groupadd maccms
+sudo usermod -aG maccms maccms
+sudo chown -R maccms:maccms /opt/maccms_rust
+sudo chmod -R u+rwX /opt/maccms_rust
+sudo chmod +x /opt/maccms_rust/maccms_rust
+```
+
 创建 systemd 服务文件：
 
 ```bash
@@ -465,6 +476,40 @@ sudo ufw allow 8080
 # CentOS/RHEL
 sudo firewall-cmd --permanent --add-port=8080/tcp
 sudo firewall-cmd --reload
+```
+
+#### 7. 安装 caddy 反代
+
+```bash
+# ubuntu
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+chmod o+r /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy
+```
+
+配置内容：
+
+```
+cd /etc/caddy
+vim Caddyfile
+# 先去域名注册商解析域名到服务器IP
+# 反代配置
+https://rust-maccms.cc, https://www.rust-maccms.cc {
+    reverse_proxy 127.0.0.1:8080
+}
+# 重启caddy
+caddy reload
+```
+
+启动 caddy：
+
+```bash
+systemctl start caddy
+systemctl enable caddy
 ```
 
 ### Docker 部署（推荐）
@@ -635,6 +680,10 @@ docker run -d \
   --restart unless-stopped \
   maccms-rust:v2.0
 ```
+
+#### 9. 配置反向代理
+
+参照 Release 包安装中的第 7 步骤。
 
 **优势**:
 
