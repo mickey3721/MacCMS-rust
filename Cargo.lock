@@ -1706,6 +1706,7 @@ dependencies = [
  "lazy_static",
  "mongodb",
  "quick-xml",
+ "rand 0.8.5",
  "reqwest",
  "serde",
  "serde_json",

@@ -11,6 +11,7 @@ use serde_json::json;
 
 use crate::index_manager::{IndexManager, CollectionIndexInfo, SingleIndexInfo};
 use crate::models::{Binding, Collection, Config, Type, Vod};
+use crate::scheduled_task::ScheduledTaskManager;
 
 // Helper function to check if user is authenticated
 fn check_auth(session: &Session) -> Result<(), HttpResponse> {
@@ -1415,4 +1416,124 @@ pub async fn get_statistics(db: web::Data<Database>, session: Session) -> impl R
     }
 
     HttpResponse::Ok().json(stats)
+}
+
+// === 定时任务管理 API ===
+
+// GET /api/admin/scheduled-task/status
+pub async fn get_scheduled_task_status(
+    task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
+    session: Session,
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+
+    match task_manager.get_task_status().await {
+        Ok(status) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "data": status
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "success": false,
+            "message": format!("获取定时任务状态失败: {}", e)
+        })),
+    }
+}
+
+// POST /api/admin/scheduled-task/start
+pub async fn start_scheduled_task(
+    task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
+    session: Session,
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+    match task_manager.start_scheduled_task().await {
+        Ok(_) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "定时采集任务已启动"
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "success": false,
+            "message": format!("启动定时任务失败: {}", e)
+        })),
+    }
+}
+
+// POST /api/admin/scheduled-task/stop
+pub async fn stop_scheduled_task(
+    task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
+    session: Session,
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+    match task_manager.stop_scheduled_task().await {
+        Ok(_) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "定时采集任务已停止"
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "success": false,
+            "message": format!("停止定时任务失败: {}", e)
+        })),
+    }
+}
+
+// PUT /api/admin/scheduled-task/config
+#[derive(Debug, Deserialize)]
+pub struct ScheduledTaskConfigRequest {
+    pub enabled: bool,
+    pub interval_hours: Option<i32>,
+}
+
+pub async fn update_scheduled_task_config(
+    task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
+    session: Session,
+    config: web::Json<ScheduledTaskConfigRequest>,
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+    match task_manager.update_config(config.enabled, config.interval_hours).await {
+        Ok(true) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "定时任务配置已更新"
+        })),
+        Ok(false) => HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "配置更新失败"
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "success": false,
+            "message": format!("更新配置失败: {}", e)
+        })),
+    }
+}
+
+// GET /api/admin/scheduled-task/logs
+pub async fn get_scheduled_task_logs(
+    task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
+    session: Session,
+    query: web::Query<ScheduledTaskLogsQuery>,
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+    match task_manager.get_task_logs(query.limit).await {
+        Ok(logs) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "data": logs
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "success": false,
+            "message": format!("获取任务日志失败: {}", e)
+        })),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ScheduledTaskLogsQuery {
+    pub limit: Option<i32>,
 }

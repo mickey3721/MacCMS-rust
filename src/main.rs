@@ -7,6 +7,7 @@ mod dto;
 mod index_manager;
 mod init_data;
 mod models;
+mod scheduled_task;
 mod site_data;
 mod template;
 mod web_handlers;
@@ -15,9 +16,10 @@ use admin_handlers::{
     batch_delete_vods, create_collection, create_config, create_indexes, create_or_update_binding,
     create_type, create_vod, delete_binding, delete_collection, delete_config, delete_type,
     delete_vod, get_bindings, get_collect_progress, get_collection_binding_status, get_collections,
-    get_config_by_key, get_configs, get_index_status, get_indexes_data, get_running_tasks, get_statistics, get_types,
-    get_vods_admin, list_indexes, start_collection_collect, stop_collect_task, update_collection,
-    update_config, update_type, update_vod,
+    get_config_by_key, get_configs, get_index_status, get_indexes_data, get_running_tasks, get_scheduled_task_logs,
+    get_scheduled_task_status, get_statistics, get_types, get_vods_admin, list_indexes, start_collection_collect,
+    start_scheduled_task, stop_collect_task, stop_scheduled_task, update_collection, update_config,
+    update_scheduled_task_config, update_type, update_vod,
 };
 use collect_handlers::{get_collect_categories, get_collect_videos, start_collect_task};
 use site_data::SiteDataManager;
@@ -110,6 +112,19 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
+    // 初始化定时任务配置
+    println!("🔧 正在初始化定时任务配置...");
+    let scheduled_task_manager = std::sync::Arc::new(scheduled_task::ScheduledTaskManager::new(db.clone()));
+    match scheduled_task_manager.initialize_config().await {
+        Ok(_) => {
+            println!("✅ 定时任务配置初始化完成");
+        }
+        Err(e) => {
+            eprintln!("⚠️  定时任务配置初始化失败: {}", e);
+            // 不退出应用，因为基本功能仍可使用
+        }
+    }
+
     let session_secret_key = Key::generate();
 
     println!("Starting server at http://127.0.0.1:8080");
@@ -120,6 +135,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db.clone()))
             // Store the site data manager in the application state
             .app_data(web::Data::new(site_data_manager.clone()))
+            // Store the scheduled task manager in the application state
+            .app_data(web::Data::new(scheduled_task_manager.clone()))
             // Session and Flash Messages Middleware
             .wrap(
                 FlashMessagesFramework::builder(
@@ -298,7 +315,28 @@ async fn main() -> std::io::Result<()> {
                     .service(web::resource("/indexes/list").route(web::get().to(list_indexes)))
                     .service(web::resource("/indexes/data").route(web::get().to(get_indexes_data)))
                     // Statistics
-                    .service(web::resource("/statistics").route(web::get().to(get_statistics))),
+                    .service(web::resource("/statistics").route(web::get().to(get_statistics)))
+                    // Scheduled Task Management
+                    .service(
+                        web::resource("/scheduled-task/status")
+                            .route(web::get().to(get_scheduled_task_status)),
+                    )
+                    .service(
+                        web::resource("/scheduled-task/start")
+                            .route(web::post().to(start_scheduled_task)),
+                    )
+                    .service(
+                        web::resource("/scheduled-task/stop")
+                            .route(web::post().to(stop_scheduled_task)),
+                    )
+                    .service(
+                        web::resource("/scheduled-task/config")
+                            .route(web::put().to(update_scheduled_task_config)),
+                    )
+                    .service(
+                        web::resource("/scheduled-task/logs")
+                            .route(web::get().to(get_scheduled_task_logs)),
+                    ),
             )
             // Collect API routes
             .service(

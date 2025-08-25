@@ -463,6 +463,74 @@ pub async fn get_collect_progress(path: web::Path<String>) -> impl Responder {
     }
 }
 
+// 带超时的HTTP请求
+async fn fetch_with_timeout(url: &str, timeout_secs: u64) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    use tokio::time::{timeout, Duration};
+    
+    match timeout(Duration::from_secs(timeout_secs), reqwest::get(url)).await {
+        Ok(Ok(response)) => {
+            match response.text().await {
+                Ok(text) => Ok(text),
+                Err(e) => Err(format!("读取响应失败: {}", e).into()),
+            }
+        }
+        Ok(Err(e)) => Err(format!("请求失败: {}", e).into()),
+        Err(_) => Err("请求超时".into()),
+    }
+}
+
+// 带重试的获取总页数函数
+async fn get_total_pages_with_retry(
+    api_url: &str,
+    max_retries: usize,
+    timeout_secs: u64,
+) -> Result<u32, Box<dyn std::error::Error + Send + Sync>> {
+    let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
+    
+    for attempt in 1..=max_retries {
+        let first_page_url = format!("{}&pg=1", api_url);
+        
+        println!("🔄 获取总页数 (尝试 {}/{})", attempt, max_retries);
+        
+        match fetch_with_timeout(&first_page_url, timeout_secs).await {
+            Ok(response_text) => {
+                match serde_json::from_str::<VideoListResponse>(&response_text) {
+                    Ok(api_response) => {
+                        if api_response.code == 1 {
+                            let total_pages = (api_response.total as f64 / api_response.limit as f64).ceil() as u32;
+                            println!("✅ 获取总页数成功: {} 页", total_pages);
+                            return Ok(total_pages);
+                        } else {
+                            let error = format!("API返回错误: {:?}", api_response);
+                            println!("❌ {}", error);
+                            last_error = Some(error.into());
+                        }
+                    }
+                    Err(e) => {
+                        let error = format!("解析API响应失败: {}", e);
+                        println!("❌ {}", error);
+                        last_error = Some(error.into());
+                    }
+                }
+            }
+            Err(e) => {
+                let error = format!("获取总页数失败: {}", e);
+                println!("❌ {}", error);
+                last_error = Some(error.into());
+            }
+        }
+        
+        // 如果不是最后一次尝试，等待一段时间再重试
+        if attempt < max_retries {
+            let delay = std::time::Duration::from_secs(2u64.pow(attempt as u32 - 1));
+            println!("⏳ 等待 {} 秒后重试...", delay.as_secs());
+            tokio::time::sleep(delay).await;
+        }
+    }
+    
+    Err(last_error.unwrap_or_else(|| "未知错误".into()))
+}
+
 // 批量采集主函数
 pub async fn start_batch_collect(
     db: &Database,
@@ -487,24 +555,31 @@ pub async fn start_batch_collect(
     .await;
 
     // 构建API URL
-    let mut api_url = format!("{}?ac=detail", collection.collect_url);
+    let mut api_url = collection.collect_url.clone();
+    if api_url.contains('?') {
+        // 如果URL已包含?，检查是否以?结尾或已有参数
+        if api_url.ends_with('?') {
+            api_url.push_str("ac=detail");
+        } else {
+            api_url.push_str("&ac=detail");
+        }
+    } else {
+        api_url.push_str("?ac=detail");
+    }
 
     // 添加hours参数
     if let Some(h) = hours {
         api_url.push_str(&format!("&h={}", h));
     }
 
-    // 获取第一页获取总页数
-    let first_page_url = format!("{}&pg=1", api_url);
-    let response = reqwest::get(&first_page_url).await?;
-    let response_text = response.text().await?;
-    let api_response: VideoListResponse = serde_json::from_str(&response_text)?;
-
-    if api_response.code != 1 {
-        return Err(format!("API返回错误: {:?}", api_response).into());
-    }
-
-    let total_pages = (api_response.total as f64 / api_response.limit as f64).ceil() as u32;
+    // 获取总页数（带重试机制）
+    let total_pages = match get_total_pages_with_retry(&api_url, 3, 30).await {
+        Ok(pages) => pages,
+        Err(e) => {
+            eprintln!("❌ 获取总页数失败，已重试3次: {}", e);
+            return Err(format!("获取总页数失败: {}", e).into());
+        }
+    };
 
     // 更新进度信息
     let mut progress = initial_progress;
@@ -548,7 +623,7 @@ pub async fn start_batch_collect(
     Ok(())
 }
 
-// 采集单页数据
+// 采集单页数据（带超时）
 async fn collect_page(
     db: &Database,
     collection: &Collection,
@@ -556,8 +631,7 @@ async fn collect_page(
     progress: &mut CollectProgress,
     task_id: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let response = reqwest::get(page_url).await?;
-    let response_text = response.text().await?;
+    let response_text = fetch_with_timeout(page_url, 30).await?;
     let api_response: VideoListResponse = serde_json::from_str(&response_text)?;
 
     if api_response.code != 1 {
