@@ -492,7 +492,7 @@ docker build -t maccms-rust:latest .
 # 运行容器（推荐）
 docker run -d \
   --name maccms-rust \
-  -p 8088:8080 \
+  -p 8080:8080 \
   -v ./maccms_data:/var/lib/mongodb \
   -v ./maccms_static:/app/static \
   -v ./maccms_logo:/var/log \
