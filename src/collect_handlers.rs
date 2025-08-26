@@ -231,6 +231,7 @@ pub async fn get_collect_categories(query: web::Query<CollectCategoriesQuery>) -
     match reqwest::get(&api_url).await {
         Ok(response) => match response.text().await {
             Ok(response_text) => {
+                // eprintln!("API Response: {}", response_text);
                 match serde_json::from_str::<JsonResponse<Category>>(&response_text) {
                     Ok(api_response) => {
                         if api_response.code == 1 {
@@ -464,16 +465,17 @@ pub async fn get_collect_progress(path: web::Path<String>) -> impl Responder {
 }
 
 // 带超时的HTTP请求
-async fn fetch_with_timeout(url: &str, timeout_secs: u64) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+async fn fetch_with_timeout(
+    url: &str,
+    timeout_secs: u64,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     use tokio::time::{timeout, Duration};
-    
+
     match timeout(Duration::from_secs(timeout_secs), reqwest::get(url)).await {
-        Ok(Ok(response)) => {
-            match response.text().await {
-                Ok(text) => Ok(text),
-                Err(e) => Err(format!("读取响应失败: {}", e).into()),
-            }
-        }
+        Ok(Ok(response)) => match response.text().await {
+            Ok(text) => Ok(text),
+            Err(e) => Err(format!("读取响应失败: {}", e).into()),
+        },
         Ok(Err(e)) => Err(format!("请求失败: {}", e).into()),
         Err(_) => Err("请求超时".into()),
     }
@@ -486,40 +488,39 @@ async fn get_total_pages_with_retry(
     timeout_secs: u64,
 ) -> Result<u32, Box<dyn std::error::Error + Send + Sync>> {
     let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
-    
+
     for attempt in 1..=max_retries {
         let first_page_url = format!("{}&pg=1", api_url);
-        
+
         println!("🔄 获取总页数 (尝试 {}/{})", attempt, max_retries);
-        
+
         match fetch_with_timeout(&first_page_url, timeout_secs).await {
-            Ok(response_text) => {
-                match serde_json::from_str::<VideoListResponse>(&response_text) {
-                    Ok(api_response) => {
-                        if api_response.code == 1 {
-                            let total_pages = (api_response.total as f64 / api_response.limit as f64).ceil() as u32;
-                            println!("✅ 获取总页数成功: {} 页", total_pages);
-                            return Ok(total_pages);
-                        } else {
-                            let error = format!("API返回错误: {:?}", api_response);
-                            println!("❌ {}", error);
-                            last_error = Some(error.into());
-                        }
-                    }
-                    Err(e) => {
-                        let error = format!("解析API响应失败: {}", e);
+            Ok(response_text) => match serde_json::from_str::<VideoListResponse>(&response_text) {
+                Ok(api_response) => {
+                    if api_response.code == 1 {
+                        let total_pages =
+                            (api_response.total as f64 / api_response.limit as f64).ceil() as u32;
+                        println!("✅ 获取总页数成功: {} 页", total_pages);
+                        return Ok(total_pages);
+                    } else {
+                        let error = format!("API返回错误: {:?}", api_response);
                         println!("❌ {}", error);
                         last_error = Some(error.into());
                     }
                 }
-            }
+                Err(e) => {
+                    let error = format!("解析API响应失败: {}", e);
+                    println!("❌ {}", error);
+                    last_error = Some(error.into());
+                }
+            },
             Err(e) => {
                 let error = format!("获取总页数失败: {}", e);
                 println!("❌ {}", error);
                 last_error = Some(error.into());
             }
         }
-        
+
         // 如果不是最后一次尝试，等待一段时间再重试
         if attempt < max_retries {
             let delay = std::time::Duration::from_secs(2u64.pow(attempt as u32 - 1));
@@ -527,7 +528,7 @@ async fn get_total_pages_with_retry(
             tokio::time::sleep(delay).await;
         }
     }
-    
+
     Err(last_error.unwrap_or_else(|| "未知错误".into()))
 }
 
