@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}播放 {{ video.vod_name }} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
+{% block title %}播放 {{ video.vod_name }}{% if current_episode_name %} - {{ current_episode_name }}{% endif %} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
 {% block description %}正在播放《{{ video.vod_name }}》，支持高清在线观看，多线路播放源选择{% endblock description %}
 {% block keywords %}{{ video.vod_name }},在线播放,免费观看,高清视频{% endblock keywords %}
 
@@ -50,6 +50,29 @@
         border-radius: 2px;
     }
     
+    .source-tabs::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* Custom scrollbar for episode list */
+    #episode-list-content::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #episode-list-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    #episode-list-content::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    #episode-list-content::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
     .loading-spinner {
         border: 3px solid #f3f3f3;
         border-top: 3px solid #3498db;
@@ -92,7 +115,7 @@
             <a href="/detail/{{ video._id['$oid'] }}" class="text-blue-600 hover:text-blue-700 flex items-center">
                 <i class="fas fa-arrow-left mr-2"></i>返回详情
             </a>
-            <h1 class="text-2xl font-bold text-gray-800">{{ video.vod_name }}</h1>
+            <h1 class="text-2xl font-bold text-gray-800">{{ video.vod_name }}{% if current_episode_name %} - {{ current_episode_name }}{% endif %}</h1>
         </div>
         <div class="flex items-center space-x-2">
             <button onclick="toggleFavorite()" class="text-red-500 hover:text-red-600 p-2">
@@ -159,7 +182,7 @@
                 </div>
                 
                 <!-- Episode Lists -->
-                <div id="episode-list-content">
+                <div id="episode-list-content" class="max-h-96 overflow-y-auto pr-2">
                     {% for source in video.vod_play_urls %}
                     {% set source_index = loop.index0 %}
                     <div id="source-episodes-{{ source_index }}" class="source-episodes {% if not loop.first %}hidden{% endif %}">
@@ -254,7 +277,7 @@
 <script>
     // Global variables
     let hls = null;
-    let currentSource = 0;
+    let currentSource = {{ play_source }};
     let currentEpisode = {{ play_index }};
     let episodePages = {};
     
@@ -271,8 +294,21 @@
     document.addEventListener('DOMContentLoaded', function() {
         initPlayer();
         initKeyboardControls();
+        updateCurrentEpisodeDisplay();
         hideLoadingSpinner();
     });
+    
+    function updateCurrentEpisodeDisplay() {
+        // Update page title with current episode info
+        const currentEpisodeName = getCurrentEpisodeName();
+        if (currentEpisodeName) {
+            document.title = `播放 {{ video.vod_name }} - ${currentEpisodeName} - {{ SITENAME | default(value="maccms-rust") }}`;
+        }
+    }
+    
+    function getCurrentEpisodeName() {
+        return '{{ current_episode_name }}';
+    }
     
     function initPlayer() {
         const video = document.getElementById('video-player');

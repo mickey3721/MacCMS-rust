@@ -3,6 +3,19 @@ use mongodb::{Database, bson::doc, options::FindOptions};
 use crate::template::TERA;
 use crate::models::{Type, Vod, User};
 use futures::stream::TryStreamExt;
+
+// Helper function to get play URL and episode name
+fn get_play_info(video: &Vod, play_source: usize, play_idx: usize) -> Result<(String, String), Box<dyn std::error::Error>> {
+    if let Some(source) = video.vod_play_urls.get(play_source) {
+        if let Some(url_info) = source.urls.get(play_idx) {
+            Ok((url_info.url.clone(), url_info.name.clone()))
+        } else {
+            Err("Play URL not found".into())
+        }
+    } else {
+        Err("No play sources available".into())
+    }
+}
 use serde::{Serialize, Deserialize};
 use crate::dto::ListPageParams;
 use actix_session::Session;
@@ -257,21 +270,28 @@ pub async fn video_player_handler(
     };
 
     // Parse play index (format: "source-index" or "index")
-    let play_idx: usize = if play_index.contains('-') {
-        // Format: "source-index", extract the index part
-        match play_index.split('-').last() {
-            Some(idx_str) => match idx_str.parse() {
-                Ok(idx) => idx,
-                Err(_) => return HttpResponse::NotFound().body("Invalid play index format"),
-            },
-            None => return HttpResponse::NotFound().body("Invalid play index format"),
+    let (play_source, play_idx) = if play_index.contains('-') {
+        // Format: "source-index", extract both parts
+        let parts: Vec<&str> = play_index.split('-').collect();
+        if parts.len() != 2 {
+            return HttpResponse::NotFound().body("Invalid play index format");
         }
+        let source_idx = match parts[0].parse() {
+            Ok(idx) => idx,
+            Err(_) => return HttpResponse::NotFound().body("Invalid source index"),
+        };
+        let episode_idx = match parts[1].parse() {
+            Ok(idx) => idx,
+            Err(_) => return HttpResponse::NotFound().body("Invalid episode index"),
+        };
+        (source_idx, episode_idx)
     } else {
-        // Format: "index"
-        match play_index.parse() {
+        // Format: "index" (backward compatibility, default to source 0)
+        let episode_idx = match play_index.parse() {
             Ok(idx) => idx,
             Err(_) => return HttpResponse::NotFound().body("Invalid play index"),
-        }
+        };
+        (0, episode_idx)
     };
 
     match with_site_data(db.clone(), site_data_manager.clone(), |mut context, site_data| async move {
@@ -309,19 +329,16 @@ pub async fn video_player_handler(
         context.insert("vod_pubdate_timestamp", &pubdate_timestamp);
         context.insert("video", &video);
 
-        // 2. Get play URL
-        let play_url = if let Some(source) = video.vod_play_urls.get(0) {
-            if let Some(url_info) = source.urls.get(play_idx) {
-                url_info.url.clone()
-            } else {
-                return Err("Play URL not found".into());
-            }
-        } else {
-            return Err("No play sources available".into());
+        // 2. Get play URL and episode name
+        let (play_url, current_episode_name) = match get_play_info(&video, play_source, play_idx) {
+            Ok(info) => info,
+            Err(e) => return Err(e),
         };
 
         context.insert("play_url", &play_url);
         context.insert("play_index", &play_idx);
+        context.insert("play_source", &play_source);
+        context.insert("current_episode_name", &current_episode_name);
 
         TERA.render("player.html", &context)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
@@ -358,13 +375,25 @@ pub async fn list_page_handler(
         };
         context.insert("category", &main_category);
 
-        // Parse subarea and subyear for filtering options
-        let subarea_options: Vec<String> = if let Some(subarea) = &main_category.subarea {
+        // Determine the actual category for filtering options (use parent if this is a sub-category)
+        let filter_category = if main_category.type_pid == 0 {
+            // This is already a top-level category
+            main_category.clone()
+        } else {
+            // This is a sub-category, get its parent for filtering options
+            match site_data.get_category_by_id(main_category.type_pid).await {
+                Some(parent_cat) => parent_cat,
+                None => return Err("Parent category not found".into()),
+            }
+        };
+
+        // Parse subarea and subyear for filtering options from the filter_category
+        let subarea_options: Vec<String> = if let Some(subarea) = &filter_category.subarea {
             subarea.split(',').map(|s| s.trim().to_string()).collect()
         } else {
             vec![]
         };
-        let subyear_options: Vec<String> = if let Some(subyear) = &main_category.subyear {
+        let subyear_options: Vec<String> = if let Some(subyear) = &filter_category.subyear {
             subyear.split(',').map(|s| s.trim().to_string()).collect()
         } else {
             vec![]
@@ -372,11 +401,11 @@ pub async fn list_page_handler(
         context.insert("subarea_options", &subarea_options);
         context.insert("subyear_options", &subyear_options);
 
-        // Get sub-categories for filter
+        // Get sub-categories for filter (from the filter_category if it's a top-level category)
         let all_categories = site_data.get_all_categories().await;
         let sub_categories: Vec<Type> = all_categories
             .iter()
-            .filter(|cat| cat.type_pid == type_id)
+            .filter(|cat| cat.type_pid == filter_category.type_id)
             .cloned()
             .collect();
         context.insert("sub_categories", &sub_categories);

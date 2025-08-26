@@ -79,7 +79,9 @@ function initMobileMenu() {
     const mobileMenu = document.getElementById('mobile-menu');
     
     if (mobileMenuButton && mobileMenu) {
-        mobileMenuButton.addEventListener('click', function() {
+        mobileMenuButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             mobileMenu.classList.toggle('hidden');
         });
         
@@ -192,7 +194,7 @@ function initVideoCards() {
         });
         
         // Add click handler for play button
-        const playButton = this.querySelector('.fa-play-circle');
+        const playButton = card.querySelector('.fa-play-circle');
         if (playButton) {
             playButton.addEventListener('click', function(e) {
                 e.preventDefault();

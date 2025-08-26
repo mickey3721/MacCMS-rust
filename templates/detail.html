@@ -43,6 +43,25 @@ video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演�
         }
     }
 
+    /* Custom scrollbar for episode grids */
+    .episode-grid::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .episode-grid::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .episode-grid::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    .episode-grid::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
     .related-video-card {
         transition: all 0.3s ease;
     }
@@ -108,23 +127,31 @@ video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演�
 
             <!-- Video Info -->
             <div class="flex-1 text-center lg:text-left">
-                <h1 class="text-3xl lg:text-4xl font-bold mb-4">{{ video.vod_name }}</h1>
+                <h1 class="text-3xl lg:text-4xl font-bold mb-4">{{ video.vod_name }}{% if video.vod_remarks %} - {{ video.vod_remarks }}{% endif %}</h1>
 
                 <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-6">
                     {% if video.vod_year %}
-                    <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                    <a href="/list/{{ video.type_id }}?year={{ video.vod_year }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
                         <i class="fas fa-calendar mr-1"></i> {{ video.vod_year }}
-                    </span>
+                    </a>
                     {% endif %}
                     {% if video.vod_area %}
-                    <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                    <a href="/list/{{ video.type_id }}?area={{ video.vod_area }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
                         <i class="fas fa-globe mr-1"></i> {{ video.vod_area }}
-                    </span>
+                    </a>
                     {% endif %}
                     {% if category %}
-                    <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                    {% if category.type_pid == 0 %}
+                    <!-- 一级分类，直接跳转到分类页面 -->
+                    <a href="/list/{{ category.type_id }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
                         <i class="fas fa-tag mr-1"></i> {{ category.type_name }}
-                    </span>
+                    </a>
+                    {% else %}
+                    <!-- 二级分类，跳转到一级分类页面并带上sub_type参数 -->
+                    <a href="/list/{{ category.type_pid }}?sub_type={{ category.type_id }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
+                        <i class="fas fa-tag mr-1"></i> {{ category.type_name }}
+                    </a>
+                    {% endif %}
                     {% endif %}
                 </div>
 
@@ -209,7 +236,7 @@ video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演�
                     </div>
                     {% endif %}
 
-                    <div id="episodes-{{ loop.index0 }}" class="episode-grid">
+                    <div id="episodes-{{ loop.index0 }}" class="episode-grid max-h-96 overflow-y-auto pr-2">
                         {% for url_info in source.urls %}
                         <a href="/play/{{ video._id['$oid'] }}/{{ loop.index0 }}-{{ loop.index0 }}"
                             class="episode-btn block bg-gray-100 hover:bg-blue-600 hover:text-white text-center py-3 px-2 rounded-lg transition-all duration-200 text-sm font-medium">
