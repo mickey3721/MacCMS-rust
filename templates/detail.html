@@ -222,13 +222,14 @@ video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演�
 
                 <!-- Episode Lists -->
                 {% for source in video.vod_play_urls %}
-                <div id="source-content-{{ loop.index0 }}"
+                {% set source_index = loop.index0 %}
+                <div id="source-content-{{ source_index }}"
                     class="play-source-content {% if not loop.first %}hidden{% endif %}">
                     {% if source.urls | length > 20 %}
                     <div class="mb-4 flex items-center justify-between">
                         <span class="text-sm text-gray-600">共 {{ source.urls | length }} 集</span>
                         <div class="flex items-center space-x-2">
-                            <button onclick="reverseEpisodes('{{ loop.index0 }}')"
+                            <button onclick="reverseEpisodes('{{ source_index }}')"
                                 class="text-sm text-blue-600 hover:text-blue-700">
                                 <i class="fas fa-sort-amount-down mr-1"></i>倒序
                             </button>
@@ -236,9 +237,10 @@ video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演�
                     </div>
                     {% endif %}
 
-                    <div id="episodes-{{ loop.index0 }}" class="episode-grid max-h-96 overflow-y-auto pr-2">
+                    <div id="episodes-{{ source_index }}" class="episode-grid max-h-96 overflow-y-auto pr-2">
                         {% for url_info in source.urls %}
-                        <a href="/play/{{ video._id['$oid'] }}/{{ loop.index0 }}-{{ loop.index0 }}"
+                        {% set episode_index = loop.index0 %}
+                        <a href="/play/{{ video._id['$oid'] }}/{{ source_index }}-{{ episode_index }}"
                             class="episode-btn block bg-gray-100 hover:bg-blue-600 hover:text-white text-center py-3 px-2 rounded-lg transition-all duration-200 text-sm font-medium">
                             {% set episode_num = loop.index + 1 %}{{ url_info.name | default(value='第' ~ episode_num ~
                             '集') }}

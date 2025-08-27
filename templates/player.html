@@ -173,7 +173,7 @@
                         <button onclick="switchSource({{ loop.index0 }})" 
                                 id="source-tab-{{ loop.index0 }}"
                                 class="source-tab px-3 py-2 rounded-t-lg font-medium transition-all duration-200 whitespace-nowrap text-sm
-                                       {% if loop.first %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                                       {% if loop.index0 == play_source %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
                             {{ source.source_name | default(value='线路' ~ loop.index) }}
                             <span class="ml-1 text-xs">({{ source.urls | length }})</span>
                         </button>
@@ -185,30 +185,17 @@
                 <div id="episode-list-content" class="max-h-96 overflow-y-auto pr-2">
                     {% for source in video.vod_play_urls %}
                     {% set source_index = loop.index0 %}
-                    <div id="source-episodes-{{ source_index }}" class="source-episodes {% if not loop.first %}hidden{% endif %}">
-                        {% if source.urls | length > 12 %}
+                    <div id="source-episodes-{{ source_index }}" class="source-episodes {% if source_index != play_source %}hidden{% endif %}">
                         <div class="mb-3 flex items-center justify-between">
                             <span class="text-sm text-gray-600">共 {{ source.urls | length }} 集</span>
-                            <div class="flex items-center space-x-2">
-                                <button onclick="prevPage({{ source_index }})" class="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50" id="prev-{{ source_index }}">
-                                    <i class="fas fa-chevron-left"></i>
-                                </button>
-                                <span class="text-sm text-gray-600" id="page-info-{{ source_index }}">1-12</span>
-                                <button onclick="nextPage({{ source_index }})" class="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50" id="next-{{ source_index }}">
-                                    <i class="fas fa-chevron-right"></i>
-                                </button>
-                            </div>
                         </div>
-                        {% endif %}
                         
                         <div id="episodes-grid-{{ source_index }}" class="episode-grid">
                             {% for url_info in source.urls %}
-                            {% if loop.index0 < 12 %}
                             <a href="/play/{{ video._id['$oid'] }}/{{ source_index }}-{{ loop.index0 }}" 
-                               class="episode-btn {% if source_index == 0 and loop.index0 == play_index %}bg-blue-600 text-white{% else %}bg-gray-100 hover:bg-blue-600 hover:text-white{% endif %} text-center py-2 px-1 rounded transition-all duration-200 text-xs font-medium">
+                               class="episode-btn {% if source_index == play_source and loop.index0 == play_index %}bg-blue-600 text-white{% else %}bg-gray-100 hover:bg-blue-600 hover:text-white{% endif %} text-center py-2 px-1 rounded transition-all duration-200 text-xs font-medium">
                                 {{ url_info.name | default(value=loop.index0 + 1) }}
                             </a>
-                            {% endif %}
                             {% endfor %}
                         </div>
                     </div>
@@ -281,11 +268,9 @@
     let currentEpisode = {{ play_index }};
     let episodePages = {};
     
-    // Initialize episode pages
+    // Initialize episode data
     {% for source in video.vod_play_urls %}
     episodePages[{{ loop.index0 }}] = {
-        currentPage: 1,
-        totalPages: Math.ceil({{ source.urls | length }} / 12),
         episodes: {{ source.urls | length }}
     };
     {% endfor %}
@@ -427,13 +412,23 @@
     }
     
     function previousEpisode() {
-        // Navigate to previous episode logic
-        console.log('Previous episode');
+        const sourceEpisodes = episodePages[currentSource];
+        if (!sourceEpisodes) return;
+        
+        const prevEpisode = currentEpisode - 1;
+        if (prevEpisode >= 0) {
+            window.location.href = `/play/{{ video._id['$oid'] }}/${currentSource}-${prevEpisode}`;
+        }
     }
     
     function nextEpisode() {
-        // Navigate to next episode logic
-        console.log('Next episode');
+        const sourceEpisodes = episodePages[currentSource];
+        if (!sourceEpisodes) return;
+        
+        const nextEpisode = currentEpisode + 1;
+        if (nextEpisode < sourceEpisodes.episodes) {
+            window.location.href = `/play/{{ video._id['$oid'] }}/${currentSource}-${nextEpisode}`;
+        }
     }
     
     function toggleFavorite() {
