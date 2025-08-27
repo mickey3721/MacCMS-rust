@@ -10,9 +10,6 @@
     <meta name="keywords" content="{% block keywords %}{{ SITEKEYWORDS | default(value=" 视频,电影,电视剧,综艺,动漫") }}{% endblock
         keywords %}">
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <!-- Custom CSS -->
     <link href="/static/css/output.css" rel="stylesheet">
 
@@ -76,6 +73,9 @@
         </div>
     </footer>
 
+    <!-- Font Awesome - loaded before closing body for better performance -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="/static/js/app.js"></script>

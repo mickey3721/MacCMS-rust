@@ -4,7 +4,8 @@
 {% block description %}{{ video.vod_name }}{% if video.vod_year %}({{ video.vod_year }}){% endif %} - {% if
 video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演，{{ video.vod_actor }}主演。{{ video.vod_content
 | striptags | truncate(length=100) }} - {{ SITENAME }}{% endblock description %}
-{% block keywords %}{{ video.vod_name }},在线观看,免费观看,{{ video.vod_year }},{{ video.vod_area }},{{ video.vod_director }},{{ video.vod_actor }},{{ SITEKEYWORDS | default(value="") }}{% endblock keywords %}
+{% block keywords %}{{ video.vod_name }},在线观看,免费观看,{{ video.vod_year }},{{ video.vod_area }},{{ video.vod_director }},{{
+video.vod_actor }},{{ SITEKEYWORDS | default(value="") }}{% endblock keywords %}
 
 {% block head %}
 <style>
@@ -110,7 +111,8 @@ video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演�
             <div class="flex-shrink-0">
                 <div class="relative group">
                     <img src="{{ video.vod_pic | default(value='https://via.placeholder.com/300x450') }}"
-                        alt="{{ video.vod_name }}" class="w-48 h-72 lg:w-64 lg:h-96 object-cover rounded-lg shadow-2xl">
+                        alt="{{ video.vod_name }}" class="w-48 h-72 lg:w-64 lg:h-96 object-cover rounded-lg shadow-2xl"
+                        fetchpriority="high">
                     <div
                         class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
                         <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -127,28 +129,33 @@ video.vod_area %}{{ video.vod_area }}{% endif %}{{ video.vod_director }}导演�
 
             <!-- Video Info -->
             <div class="flex-1 text-center lg:text-left">
-                <h1 class="text-3xl lg:text-4xl font-bold mb-4">{{ video.vod_name }}{% if video.vod_remarks %} - {{ video.vod_remarks }}{% endif %}</h1>
+                <h1 class="text-3xl lg:text-4xl font-bold mb-4">{{ video.vod_name }}{% if video.vod_remarks %} - {{
+                    video.vod_remarks }}{% endif %}</h1>
 
                 <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-6">
                     {% if video.vod_year %}
-                    <a href="/list/{{ video.type_id }}?year={{ video.vod_year }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
+                    <a href="/list/{{ video.type_id }}?year={{ video.vod_year }}"
+                        class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
                         <i class="fas fa-calendar mr-1"></i> {{ video.vod_year }}
                     </a>
                     {% endif %}
                     {% if video.vod_area %}
-                    <a href="/list/{{ video.type_id }}?area={{ video.vod_area }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
+                    <a href="/list/{{ video.type_id }}?area={{ video.vod_area }}"
+                        class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
                         <i class="fas fa-globe mr-1"></i> {{ video.vod_area }}
                     </a>
                     {% endif %}
                     {% if category %}
                     {% if category.type_pid == 0 %}
                     <!-- 一级分类，直接跳转到分类页面 -->
-                    <a href="/list/{{ category.type_id }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
+                    <a href="/list/{{ category.type_id }}"
+                        class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
                         <i class="fas fa-tag mr-1"></i> {{ category.type_name }}
                     </a>
                     {% else %}
                     <!-- 二级分类，跳转到一级分类页面并带上sub_type参数 -->
-                    <a href="/list/{{ category.type_pid }}?sub_type={{ category.type_id }}" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
+                    <a href="/list/{{ category.type_pid }}?sub_type={{ category.type_id }}"
+                        class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm hover:bg-opacity-30 transition-colors">
                         <i class="fas fa-tag mr-1"></i> {{ category.type_name }}
                     </a>
                     {% endif %}

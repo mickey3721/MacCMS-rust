@@ -259,8 +259,16 @@ description %}
                 <div class="video-card bg-white rounded-lg shadow-md overflow-hidden">
                     <a href="/detail/{{ vod._id['$oid'] }}" class="block">
                         <div class="relative">
+                            {% if loop.first %}
+                            <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                                alt="{{ vod.vod_name }}" class="w-full h-64 object-cover" fetchpriority="high">
+                            {% elif loop.index <= 2 %}
+                            <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                                alt="{{ vod.vod_name }}" class="w-full h-64 object-cover">
+                            {% else %}
                             <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
                                 alt="{{ vod.vod_name }}" class="w-full h-64 object-cover" loading="lazy">
+                            {% endif %}
                             <div
                                 class="absolute top-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
                                 {{ vod.vod_remarks | default(value='更新中') }}

@@ -16,10 +16,11 @@ use admin_handlers::{
     batch_delete_vods, create_collection, create_config, create_indexes, create_or_update_binding,
     create_type, create_vod, delete_binding, delete_collection, delete_config, delete_type,
     delete_vod, get_bindings, get_collect_progress, get_collection_binding_status, get_collections,
-    get_config_by_key, get_configs, get_index_status, get_indexes_data, get_running_tasks, get_scheduled_task_logs,
-    get_scheduled_task_status, get_statistics, get_types, get_vods_admin, list_indexes, start_collection_collect,
-    start_scheduled_task, stop_collect_task, stop_scheduled_task, update_collection, update_config,
-    update_scheduled_task_config, update_type, update_vod,
+    get_config_by_key, get_configs, get_index_status, get_indexes_data, get_running_tasks,
+    get_scheduled_task_logs, get_scheduled_task_status, get_statistics, get_types, get_vods_admin,
+    list_indexes, start_collection_collect, start_scheduled_task, stop_collect_task,
+    stop_scheduled_task, update_collection, update_config, update_scheduled_task_config,
+    update_type, update_vod,
 };
 use collect_handlers::{get_collect_categories, get_collect_videos, start_collect_task};
 use site_data::SiteDataManager;
@@ -27,10 +28,76 @@ use site_data::SiteDataManager;
 use actix_files::Files;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::cookie::Key;
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::dev::{forward_ready, Service, Transform};
+use actix_web::http::header::{HeaderValue, CACHE_CONTROL};
+use actix_web::{
+    dev::{ServiceRequest, ServiceResponse},
+    get, web, App, Error, HttpResponse, HttpServer, Responder, Result,
+};
 use actix_web_flash_messages::{storage::CookieMessageStore, FlashMessagesFramework};
 use futures::stream::TryStreamExt;
 use mongodb::Database;
+use std::future::{ready, Ready};
+use std::rc::Rc;
+
+// Static file cache middleware
+pub struct StaticCacheMiddleware;
+
+impl<S, B> Transform<S, ServiceRequest> for StaticCacheMiddleware
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S::Future: 'static,
+    B: 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = Error;
+    type InitError = ();
+    type Transform = StaticCacheMiddlewareService<S>;
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+
+    fn new_transform(&self, service: S) -> Self::Future {
+        ready(Ok(StaticCacheMiddlewareService {
+            service: Rc::new(service),
+        }))
+    }
+}
+
+pub struct StaticCacheMiddlewareService<S> {
+    service: Rc<S>,
+}
+
+impl<S, B> Service<ServiceRequest> for StaticCacheMiddlewareService<S>
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S::Future: 'static,
+    B: 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = Error;
+    type Future =
+        std::pin::Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>>>>;
+
+    forward_ready!(service);
+
+    fn call(&self, req: ServiceRequest) -> Self::Future {
+        let service = self.service.clone();
+
+        Box::pin(async move {
+            let is_static = req.path().starts_with("/static/");
+            let mut res = service.call(req).await?;
+
+            if is_static {
+                // Set cache headers for static files (24 hours)
+                res.headers_mut().insert(
+                    CACHE_CONTROL,
+                    HeaderValue::from_static("public, max-age=86400"),
+                );
+            }
+
+            Ok(res)
+        })
+    }
+}
 
 // Handler to get a list of vods
 #[get("/vods")]
@@ -114,7 +181,8 @@ async fn main() -> std::io::Result<()> {
 
     // 初始化定时任务配置
     println!("🔧 正在初始化定时任务配置...");
-    let scheduled_task_manager = std::sync::Arc::new(scheduled_task::ScheduledTaskManager::new(db.clone()));
+    let scheduled_task_manager =
+        std::sync::Arc::new(scheduled_task::ScheduledTaskManager::new(db.clone()));
     match scheduled_task_manager.initialize_config().await {
         Ok(_) => {
             println!("✅ 定时任务配置初始化完成");
@@ -137,6 +205,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(site_data_manager.clone()))
             // Store the scheduled task manager in the application state
             .app_data(web::Data::new(scheduled_task_manager.clone()))
+            // Static file cache middleware
+            .wrap(StaticCacheMiddleware)
             // Session and Flash Messages Middleware
             .wrap(
                 FlashMessagesFramework::builder(
@@ -169,8 +239,14 @@ async fn main() -> std::io::Result<()> {
                 web::resource("/search")
                     .route(web::get().to(web_handlers::search_page_handler_wrapper)),
             )
-            // Static files
-            .service(Files::new("/static", "./static").show_files_listing())
+            // Static files with cache configuration
+            .service(
+                Files::new("/static", "./static")
+                    .show_files_listing()
+                    .use_etag(true)
+                    .use_last_modified(true)
+                    .prefer_utf8(true),
+            )
             // Admin Web routes
             .service(
                 web::resource("/admin/login")

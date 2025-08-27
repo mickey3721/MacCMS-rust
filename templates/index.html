@@ -47,6 +47,7 @@ description %}
 <!-- Video Categories -->
 <div class="container mx-auto px-4 py-8">
     {% for cat_data in categorized_videos %}
+    {% set is_first_category = loop.first %}
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center">
@@ -64,8 +65,16 @@ description %}
             <div class="video-card bg-white rounded-lg shadow-md overflow-hidden">
                 <a href="/detail/{{ vod._id['$oid'] }}" class="block">
                     <div class="relative">
+                        {% if is_first_category and loop.first %}
                         <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
-                            alt="{{ vod.vod_name }}" class="w-full h-48 object-cover" loading="lazy">
+                            alt="{{ vod.vod_name }}" class="w-full h-48 object-cover transition-opacity duration-300 opacity-100" fetchpriority="high">
+                        {% elif is_first_category and loop.index <= 6 %}
+                        <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                            alt="{{ vod.vod_name }}" class="w-full h-48 object-cover transition-opacity duration-300 opacity-100">
+                        {% else %}
+                        <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                            alt="{{ vod.vod_name }}" class="w-full h-48 object-cover transition-opacity duration-300 opacity-100" loading="lazy">
+                        {% endif %}
                         <div class="absolute top-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
                             {{ vod.vod_remarks | default(value='更新中') }}
                         </div>
