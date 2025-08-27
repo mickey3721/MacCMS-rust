@@ -1,6 +1,6 @@
 # MacCMS Rust Edition
 
-![MacCMS Rust Edition](./static//images/lighthouse.png)
+![MacCMS Rust Edition](./static/lighthouse.png)
 
 ## 🚀 项目简介
 
