@@ -32,7 +32,7 @@ use actix_web::dev::{forward_ready, Service, Transform};
 use actix_web::http::header::{HeaderValue, CACHE_CONTROL};
 use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
-    get, web, App, Error, HttpResponse, HttpServer, Responder, Result,
+    get, middleware, web, App, Error, HttpResponse, HttpServer, Responder, Result,
 };
 use actix_web_flash_messages::{storage::CookieMessageStore, FlashMessagesFramework};
 use futures::stream::TryStreamExt;
@@ -206,6 +206,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(site_data_manager.clone()))
             // Store the scheduled task manager in the application state
             .app_data(web::Data::new(scheduled_task_manager.clone()))
+            // Gzip compression middleware
+            .wrap(middleware::Compress::default())
             // Static file cache middleware
             .wrap(StaticCacheMiddleware)
             // Session and Flash Messages Middleware
