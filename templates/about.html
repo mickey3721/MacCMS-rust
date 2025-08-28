@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}关于我们 - {{ SITENAME }}{% endblock %}
+
+{% block description %}了解{{ SITENAME }}的故事和使命，我们致力于为用户提供高质量影视内容的在线平台{% endblock %}
+
+{% block keywords %}关于我们,{{ SITENAME }},影视平台,团队介绍,公司使命{% endblock %}
+
+{% block content %}
+<!-- 主要内容区域 -->
+<main class="container mx-auto max-w-4xl px-4 md:px-6 py-8 md:py-12">
+  <!-- 页面标题 -->
+  <section class="hero-bg rounded-xl p-8 md:p-12 mb-8 md:mb-12">
+    <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">关于我们</h1>
+    <p class="text-gray-300 text-lg md:text-xl">了解{{ SITENAME }}的故事和使命</p>
+  </section>
+
+  <!-- 公司介绍 -->
+  <section class="bg-card-bg rounded-xl p-6 md:p-8 mb-8">
+    <div class="flex items-center mb-6">
+      <i class="fas fa-film text-primary text-2xl mr-3"></i>
+      <h2 class="text-2xl font-bold text-white">{{ SITENAME }}</h2>
+    </div>
+    <p class="text-gray-300 mb-4 leading-relaxed">
+      {{ SITENAME }}成立于2023年，是一家致力于为用户提供高质量影视内容的在线平台。我们深知优秀的影视作品对人们生活的重要性，因此我们不断努力，为用户带来最优质的观影体验。
+    </p>
+    <p class="text-gray-300 mb-4 leading-relaxed">
+      我们的团队由一群热爱影视文化的专业人士组成，包括内容策划、技术开发、用户服务等各个领域的专家。我们相信，通过技术的力量和优质的内容，能够为用户创造更美好的娱乐生活。
+    </p>
+  </section>
+
+  <!-- 我们的使命 -->
+  <section class="bg-card-bg rounded-xl p-6 md:p-8 mb-8">
+    <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+      <i class="fas fa-bullseye text-primary mr-3"></i>
+      我们的使命
+    </h2>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="text-center">
+        <div class="bg-primary bg-opacity-20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-users text-primary text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">服务用户</h3>
+        <p class="text-gray-400 text-sm">为亿万用户提供优质的影视内容和服务</p>
+      </div>
+      <div class="text-center">
+        <div class="bg-primary bg-opacity-20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-star text-primary text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">品质保证</h3>
+        <p class="text-gray-400 text-sm">精选高品质内容，确保最佳观影体验</p>
+      </div>
+      <div class="text-center">
+        <div class="bg-primary bg-opacity-20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-rocket text-primary text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">技术创新</h3>
+        <p class="text-gray-400 text-sm">运用先进技术，打造智能化观影平台</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 我们的优势 -->
+  <section class="bg-card-bg rounded-xl p-6 md:p-8 mb-8">
+    <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+      <i class="fas fa-trophy text-primary mr-3"></i>
+      我们的优势
+    </h2>
+    <div class="space-y-4">
+      <div class="flex items-start">
+        <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-1">海量内容库</h3>
+          <p class="text-gray-400">拥有超过10万部影视作品，涵盖电影、电视剧、动画、综艺等多种类型</p>
+        </div>
+      </div>
+      <div class="flex items-start">
+        <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-1">高清画质</h3>
+          <p class="text-gray-400">支持4K超高清播放，为您带来影院级的视觉享受</p>
+        </div>
+      </div>
+      <div class="flex items-start">
+        <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-1">多端同步</h3>
+          <p class="text-gray-400">支持手机、平板、电脑等多种设备，随时随地观看您喜爱的内容</p>
+        </div>
+      </div>
+      <div class="flex items-start">
+        <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-1">智能推荐</h3>
+          <p class="text-gray-400">基于AI算法，为您推荐个性化的影视内容</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 团队介绍 -->
+  <section class="bg-card-bg rounded-xl p-6 md:p-8">
+    <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+      <i class="fas fa-users text-primary mr-3"></i>
+      我们的团队
+    </h2>
+    <p class="text-gray-300 mb-4">
+      我们的团队由200多名优秀的员工组成，包括技术研发、内容运营、市场营销、客户服务等各个领域的专业人才。我们致力于为用户提供最好的产品和服务体验。
+    </p>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-dark-bg rounded-lg p-4">
+        <h3 class="text-lg font-semibold text-white mb-2">技术研发团队</h3>
+        <p class="text-gray-400 text-sm">负责平台开发、系统架构、用户体验优化等技术工作</p>
+      </div>
+      <div class="bg-dark-bg rounded-lg p-4">
+        <h3 class="text-lg font-semibold text-white mb-2">内容运营团队</h3>
+        <p class="text-gray-400 text-sm">负责内容采购、审核、分类和推荐策略制定</p>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}

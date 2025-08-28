@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>联系方式 - 影视天堂</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="navbar.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-bg': '#0f172a',
+            'card-bg': '#1e293b',
+            'primary': '#f43f5e',
+            'secondary': '#94a3b8'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    .hero-bg {
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+        url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center 25%;
+      position: relative;
+    }
+
+    .contact-card {
+      transition: all 0.3s ease;
+    }
+
+    .contact-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+      .mobile-padding {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .mobile-text-lg {
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-text-xl {
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-dark-bg">
+  <!-- 引入通用导航栏 -->
+  <div id="navbar-container"></div>
+
+  <script>
+    // 加载通用导航栏
+    fetch('navbar.html')
+      .then(response => response.text())
+      .then(html => {
+        document.getElementById('navbar-container').innerHTML = html;
+        // 加载导航栏JavaScript
+        const script = document.createElement('script');
+        script.src = 'navbar.js';
+        script.onload = function () {
+          // 确保脚本加载完成后初始化
+          if (typeof initMobileMenu === 'function') {
+            initMobileMenu();
+          }
+          if (typeof initDropdownMenu === 'function') {
+            initDropdownMenu();
+          }
+        };
+        document.head.appendChild(script);
+      })
+      .catch(error => console.error('Error loading navbar:', error));
+  </script>
+
+  <!-- 主要内容区域 -->
+  <main class="container mx-auto max-w-4xl px-4 md:px-6 py-8 md:py-12">
+    <!-- 页面标题 -->
+    <section class="hero-bg rounded-xl p-8 md:p-12 mb-8 md:mb-12">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">联系我们</h1>
+      <p class="text-gray-300 text-lg md:text-xl">我们随时为您提供帮助和支持</p>
+    </section>
+
+    <!-- 联系方式卡片 -->
+    <section class="grid md:grid-cols-2 gap-6 mb-8">
+      <div class="contact-card bg-card-bg rounded-xl p-6">
+        <div class="flex items-center mb-4">
+          <div class="bg-primary bg-opacity-20 rounded-full w-12 h-12 flex items-center justify-center mr-4">
+            <i class="fas fa-phone text-primary text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-white">客服热线</h3>
+        </div>
+        <p class="text-gray-300 mb-2">400-123-4567</p>
+        <p class="text-gray-400 text-sm">周一至周日 9:00-22:00</p>
+      </div>
+
+      <div class="contact-card bg-card-bg rounded-xl p-6">
+        <div class="flex items-center mb-4">
+          <div class="bg-primary bg-opacity-20 rounded-full w-12 h-12 flex items-center justify-center mr-4">
+            <i class="fas fa-envelope text-primary text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-white">邮箱地址</h3>
+        </div>
+        <p class="text-gray-300 mb-2">support@yingshitiantang.com</p>
+        <p class="text-gray-400 text-sm">24小时内回复</p>
+      </div>
+
+      <div class="contact-card bg-card-bg rounded-xl p-6">
+        <div class="flex items-center mb-4">
+          <div class="bg-primary bg-opacity-20 rounded-full w-12 h-12 flex items-center justify-center mr-4">
+            <i class="fas fa-comments text-primary text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-white">在线客服</h3>
+        </div>
+        <p class="text-gray-300 mb-2">微信公众号：影视天堂</p>
+        <p class="text-gray-400 text-sm">随时在线，快速响应</p>
+      </div>
+
+      <div class="contact-card bg-card-bg rounded-xl p-6">
+        <div class="flex items-center mb-4">
+          <div class="bg-primary bg-opacity-20 rounded-full w-12 h-12 flex items-center justify-center mr-4">
+            <i class="fas fa-map-marker-alt text-primary text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-white">公司地址</h3>
+        </div>
+        <p class="text-gray-300 mb-2">北京市朝阳区</p>
+        <p class="text-gray-400 text-sm">朝阳区建国路88号SOHO现代城</p>
+      </div>
+    </section>
+
+    <!-- 常见问题 -->
+    <section class="bg-card-bg rounded-xl p-6 md:p-8">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <i class="fas fa-question-circle text-primary mr-3"></i>
+        常见问题
+      </h2>
+      <div class="space-y-4">
+        <div class="border-b border-gray-700 pb-4">
+          <h3 class="text-lg font-semibold text-white mb-2">如何注册账户？</h3>
+          <p class="text-gray-400">点击网站右上角的"注册"按钮，填写相关信息即可完成注册。注册成功后即可享受完整服务。</p>
+        </div>
+        <div class="border-b border-gray-700 pb-4">
+          <h3 class="text-lg font-semibold text-white mb-2">忘记密码怎么办？</h3>
+          <p class="text-gray-400">在登录页面点击"忘记密码"，输入注册邮箱，我们会发送重置密码的链接到您的邮箱。</p>
+        </div>
+        <div class="border-b border-gray-700 pb-4">
+          <h3 class="text-lg font-semibold text-white mb-2">如何成为VIP会员？</h3>
+          <p class="text-gray-400">登录后进入"会员中心"，选择适合的会员套餐进行购买。会员可享受无广告观看、高清画质等特权。</p>
+        </div>
+        <div class="pb-4">
+          <h3 class="text-lg font-semibold text-white mb-2">支持哪些设备？</h3>
+          <p class="text-gray-400">我们支持手机、平板、电脑、智能电视等多种设备，支持iOS和Android系统。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-card-bg py-6 md:py-8 mt-8 md:mt-12">
+    <div class="container mx-auto max-w-6xl px-4 md:px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0 text-center md:text-left">
+          <div class="flex items-center justify-center md:justify-start">
+            <i class="fas fa-film text-primary text-2xl mr-3"></i>
+            <h2 class="text-xl font-bold text-white">影视天堂</h2>
+          </div>
+          <p class="text-secondary mt-2 text-sm md:text-base">海量高清影视内容，随时随地观看</p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+          <a href="about.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">关于我们</a>
+          <a href="contact.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">联系方式</a>
+          <a href="terms.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">用户协议</a>
+          <a href="privacy.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">隐私政策</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-700 mt-6 md:mt-8 pt-4 md:pt-6 text-center text-secondary text-sm md:text-base">
+        <p>© 2025 影视天堂 版权所有 | 本网站仅供学习交流使用</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 回到顶部按钮 -->
+  <button id="backToTop"
+    class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-rose-500 transition-colors opacity-0 invisible transition-all duration-300">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    // 回到顶部按钮
+    const backToTopBtn = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'invisible');
+        backToTopBtn.classList.add('opacity-100', 'visible');
+      } else {
+        backToTopBtn.classList.remove('opacity-100', 'visible');
+        backToTopBtn.classList.add('opacity-0', 'invisible');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - {{ SITENAME | default(value="影视天堂") }}{% endblock title %}
+{% block description %}{{ SITEDESCRIPTION | default(value=SITENAME ~ " - 专业的在线视频网站，提供最新最全的电影、电视剧、综艺、动漫等视频资源") }}{% endblock description %}
+{% block keywords %}{{ SITEKEYWORDS | default(value="在线视频,电影,电视剧,综艺,动漫,高清视频") }}{% endblock keywords %}
+
+{% block head %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    min-height: 100vh;
+    color: #e2e8f0;
+    overflow-x: hidden;
+  }
+
+  .hero-bg {
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+      url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center 25%;
+    position: relative;
+  }
+
+  .filter-btn {
+    transition: all 0.3s ease;
+  }
+
+  .filter-btn.active {
+    background-color: #f43f5e;
+    color: white;
+  }
+
+  .content-card {
+    transition: all 0.3s ease;
+    transform-origin: center bottom;
+  }
+
+  .content-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  }
+
+  /* 移动端优化样式 */
+  @media (max-width: 768px) {
+    .mobile-padding {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .mobile-text-lg {
+      font-size: 1.125rem;
+      line-height: 1.75rem;
+    }
+
+    .mobile-text-xl {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+
+    .mobile-btn {
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      min-height: 2.8rem;
+    }
+
+    .mobile-btn-sm {
+      padding: 0.5rem 0.8rem;
+      font-size: 0.8rem;
+    }
+
+    .mobile-filter-container {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .mobile-filter-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-filter-item {
+      flex-shrink: 0;
+    }
+  }
+</style>
+{% endblock head %}
+
+{% block content %}
+<!-- 主要内容区域 -->
+<main class="container mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-8">
+  <!-- 视频分类 -->
+  {% for cat_data in categorized_videos %}
+  {% set is_first_category = loop.first %}
+  <section class="mb-10">
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="mobile-text-lg md:text-xl font-bold flex items-center">
+        <span class="w-1 h-6 bg-red-500 mr-2 rounded"></span>
+        {{ cat_data.category.type_name }}
+      </h2>
+      <a href="/list/{{ cat_data.category.type_id }}" class="text-red-500 text-sm hover:underline">查看更多 <i class="fas fa-arrow-right ml-1"></i></a>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+      {% for vod in cat_data.videos | slice(end=10) %}
+      <div class="content-card bg-gray-800 rounded-xl overflow-hidden">
+        <a href="/detail/{{ vod._id['$oid'] }}" class="block">
+          <div class="relative aspect-[2/3]">
+            {% if is_first_category and loop.first %}
+            <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/400x600') }}"
+                 alt="{{ vod.vod_name }}" class="w-full h-full object-cover" fetchpriority="high">
+            {% elif is_first_category and loop.index <= 6 %}
+            <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/400x600') }}"
+                 alt="{{ vod.vod_name }}" class="w-full h-full object-cover">
+            {% else %}
+            <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/400x600') }}"
+                 alt="{{ vod.vod_name }}" class="w-full h-full object-cover" loading="lazy">
+            {% endif %}
+            <div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+              {{ vod.vod_remarks | default(value='HD') }}
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                {% if vod.vod_year %}
+                <span>{{ vod.vod_year }}</span>
+                {% else %}
+                <span>2023</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">{{ vod.vod_name }}</h3>
+            <p class="text-gray-400 text-xs md:text-sm line-clamp-1">
+              {% if vod.vod_class %}
+              {{ vod.vod_class }}
+              {% else %}
+              {{ cat_data.category.type_name }}
+              {% endif %}
+            </p>
+          </div>
+        </a>
+      </div>
+      {% else %}
+      <div class="col-span-full text-center py-8">
+        <div class="text-gray-400">
+          <i class="fas fa-film text-4xl mb-4"></i>
+          <p class="text-lg">暂无{{ cat_data.category.type_name }}内容</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+
+  {% if categorized_videos | length == 0 %}
+  <div class="text-center py-16">
+    <div class="text-gray-400">
+      <i class="fas fa-video text-6xl mb-4"></i>
+      <p class="text-xl mb-4">暂无视频内容</p>
+      <p class="text-gray-500">请先添加视频或检查数据配置</p>
+    </div>
+  </div>
+  {% endif %}
+</main>
+{% endblock content %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// 页面特定的JavaScript代码
+document.addEventListener('DOMContentLoaded', function() {
+  // 初始化页面功能
+  console.log('首页加载完成');
+});
+</script>
+{% endblock scripts %}

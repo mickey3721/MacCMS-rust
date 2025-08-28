@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
+{% block description %}{{ SITEDESCRIPTION | default(value=SITENAME ~ " - 专业的在线视频网站，提供最新最全的电影、电视剧、综艺、动漫等视频资源") }}{%
+endblock
+description %}
+{% block keywords %}{{ SITEKEYWORDS | default(value="在线视频,电影,电视剧,综艺,动漫,高清视频") }}{% endblock keywords %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
+    <div class="container mx-auto px-4">
+        <div class="text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-4">{{ SITENAME | default(value="maccms-rust") }}</h1>
+            <p class="text-xl md:text-2xl mb-8">发现精彩影视世界，尽享极致视听体验</p>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <form action="/search" method="GET" class="flex-1 max-w-2xl mx-auto">
+                    <div class="relative">
+                        <input type="text" name="wd" placeholder="搜索你喜欢的电影、电视剧..."
+                            class="w-full px-6 py-4 pr-12 rounded-full text-gray-800 text-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        <button type="submit"
+                            class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Categories -->
+<section class="py-8 bg-white">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-wrap justify-center gap-4">
+            {% for category in categories %}
+            <a href="/list/{{ category.type_id }}"
+                class="group px-6 py-3 bg-gray-100 rounded-full hover:bg-blue-600 hover:text-white transition-all duration-300 transform hover:scale-105">
+                <i class="fas fa-film mr-2 group-hover:text-white"></i>
+                {{ category.type_name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Video Categories -->
+<div class="container mx-auto px-4 py-8">
+    {% for cat_data in categorized_videos %}
+    {% set is_first_category = loop.first %}
+    <section class="mb-12">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <h2 class="text-2xl font-bold text-gray-800">{{ cat_data.category.type_name }}</h2>
+                <span class="ml-3 px-3 py-1 bg-blue-100 text-blue-600 text-sm rounded-full">HOT</span>
+            </div>
+            <a href="/list/{{ cat_data.category.type_id }}"
+                class="text-blue-600 hover:text-blue-700 font-medium flex items-center">
+                查看更多 <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {% for vod in cat_data.videos %}
+            <div class="video-card bg-white rounded-lg shadow-md overflow-hidden">
+                <a href="/detail/{{ vod._id['$oid'] }}" class="block">
+                    <div class="relative">
+                        {% if is_first_category and loop.first %}
+                        <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                            alt="{{ vod.vod_name }}" class="w-full h-48 object-cover transition-opacity duration-300 opacity-100" fetchpriority="high">
+                        {% elif is_first_category and loop.index <= 6 %}
+                        <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                            alt="{{ vod.vod_name }}" class="w-full h-48 object-cover transition-opacity duration-300 opacity-100">
+                        {% else %}
+                        <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
+                            alt="{{ vod.vod_name }}" class="w-full h-48 object-cover transition-opacity duration-300 opacity-100" loading="lazy">
+                        {% endif %}
+                        <div class="absolute top-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
+                            {{ vod.vod_remarks | default(value='更新中') }}
+                        </div>
+                        {% if vod.vod_year %}
+                        <div
+                            class="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
+                            {{ vod.vod_year }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-semibold text-gray-800 text-sm mb-1 line-clamp-2">{{ vod.vod_name }}</h3>
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span>
+                                {% if vod.vod_pubdate and vod.vod_pubdate['$date'] and
+                                vod.vod_pubdate['$date']['$numberLong'] %}
+                                <script>document.write(new Date(parseInt('{{ vod.vod_pubdate["$date"]["$numberLong"] }}')).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }));</script>
+                                {% else %}
+                                08-15
+                                {% endif %}
+                            </span>
+                            <div class="flex items-center">
+                                <i class="fas fa-play-circle mr-1"></i>
+                                <span>播放</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center py-8">
+                <div class="text-gray-400">
+                    <i class="fas fa-film text-4xl mb-4"></i>
+                    <p class="text-lg">暂无{{ cat_data.category.type_name }}内容</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+
+    {% if categorized_videos | length == 0 %}
+    <div class="text-center py-16">
+        <div class="text-gray-400">
+            <i class="fas fa-video text-6xl mb-4"></i>
+            <p class="text-xl mb-4">暂无视频内容</p>
+            <p class="text-gray-500">请先添加视频或检查数据配置</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Features Section -->
+<section class="py-16 bg-gray-100">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">为什么选择我们</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">我们致力于为用户提供最优质的视频观看体验</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-hd text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold mb-2">高清画质</h3>
+                <p class="text-gray-600">支持4K超高清画质，带来极致视觉享受</p>
+            </div>
+
+            <div class="text-center">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-bolt text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold mb-2">快速加载</h3>
+                <p class="text-gray-600">采用先进的CDN加速技术，秒速播放不卡顿</p>
+            </div>
+
+            <div class="text-center">
+                <div class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-mobile-alt text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold mb-2">多端支持</h3>
+                <p class="text-gray-600">支持手机、平板、电脑等多种设备观看</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}

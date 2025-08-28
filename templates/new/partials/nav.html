@@ -1,0 +1,92 @@
+<!-- 通用导航栏HTML结构 -->
+<!-- 顶部导航 -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <a href="/">
+      <i class="fas fa-film navbar-logo"></i>
+    </a>
+    <a href="/" class="navbar-title">{{ SITENAME | default(value='影视天堂') }}</a>
+
+    <!-- PC端导航 -->
+    <div class="navbar-nav">
+      {% for category in categories %}
+      <a href="/list/{{ category.type_id }}" class="{% if current_category_id and current_category_id == category.type_id %}active{% endif %}">{{ category.type_name }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="navbar-actions">
+    <!-- 搜索按钮 - PC端 -->
+    <a href="/search" class="navbar-search">
+      <i class="fas fa-search"></i>
+    </a>
+
+    <!-- 播放记录下拉 - PC端 -->
+    <div class="dropdown">
+      <button class="dropdown-toggle">
+        <i class="fas fa-history"></i> 播放记录
+        <i class="fas fa-chevron-down"></i>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-header">
+          <h3>最近观看</h3>
+        </div>
+        <div class="dropdown-content">
+          <!-- 播放记录将由JavaScript动态渲染 -->
+          <div class="dropdown-item">
+            <div class="dropdown-item-content">
+              <p class="text-gray-400 text-center py-4">暂无播放记录</p>
+            </div>
+          </div>
+        </div>
+        <div class="dropdown-footer">
+          <a href="#" onclick="clearHistory()">清除全部记录</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 移动端菜单按钮 -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- 移动端导航菜单 -->
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-content">
+    <div class="mobile-nav-links">
+      {% for category in categories %}
+      <a href="/list/{{ category.type_id }}" class="{% if current_category_id and current_category_id == category.type_id %}active{% endif %}">{{ category.type_name }}</a>
+      {% endfor %}
+    </div>
+
+    <!-- 搜索框 - 移动端 -->
+    <div class="mobile-search">
+      <form action="/search" method="GET">
+        <input type="text" name="q" placeholder="搜索..." value="{{ q | default(value='') }}">
+        <button type="submit">
+          <i class="fas fa-search"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- 播放记录 - 移动端 -->
+    <div class="mobile-history">
+      <div class="flex justify-between items-center mb-3">
+        <h3>
+          <i class="fas fa-history"></i> 播放记录
+        </h3>
+        <a href="#" onclick="clearHistory()" class="text-primary text-sm">
+          <i class="fas fa-trash"></i> 清空
+        </a>
+      </div>
+      <div class="mobile-history-list">
+        <!-- 移动端播放记录将由JavaScript动态渲染 -->
+        <div class="mobile-history-item">
+          <p class="text-gray-400 text-center py-4">暂无播放记录</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

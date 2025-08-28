@@ -125,6 +125,8 @@ impl SiteDataManager {
             .await
             .unwrap_or_else(|_| vec![]);
         
+        // 配置加载完成
+        
         let mut config_map = HashMap::new();
         for config in configs {
             config_map.insert(config.config_key, config.config_value);

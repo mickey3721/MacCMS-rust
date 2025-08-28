@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>关于我们 - 影视天堂</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="navbar.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-bg': '#0f172a',
+            'card-bg': '#1e293b',
+            'primary': '#f43f5e',
+            'secondary': '#94a3b8'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    .hero-bg {
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+        url('https://images.unsplash.com/photo-1489599102910-59206b8ca314?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center 25%;
+      position: relative;
+    }
+
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+      .mobile-padding {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .mobile-text-lg {
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-text-xl {
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-dark-bg">
+  <!-- 引入通用导航栏 -->
+  <div id="navbar-container"></div>
+
+  <script>
+    // 加载通用导航栏
+    fetch('navbar.html')
+      .then(response => response.text())
+      .then(html => {
+        document.getElementById('navbar-container').innerHTML = html;
+        // 加载导航栏JavaScript
+        const script = document.createElement('script');
+        script.src = 'navbar.js';
+        script.onload = function () {
+          // 确保脚本加载完成后初始化
+          if (typeof initMobileMenu === 'function') {
+            initMobileMenu();
+          }
+          if (typeof initDropdownMenu === 'function') {
+            initDropdownMenu();
+          }
+        };
+        document.head.appendChild(script);
+      })
+      .catch(error => console.error('Error loading navbar:', error));
+  </script>
+
+  <!-- 主要内容区域 -->
+  <main class="container mx-auto max-w-4xl px-4 md:px-6 py-8 md:py-12">
+    <!-- 页面标题 -->
+    <section class="hero-bg rounded-xl p-8 md:p-12 mb-8 md:mb-12">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">关于我们</h1>
+      <p class="text-gray-300 text-lg md:text-xl">了解影视天堂的故事和使命</p>
+    </section>
+
+    <!-- 公司介绍 -->
+    <section class="bg-card-bg rounded-xl p-6 md:p-8 mb-8">
+      <div class="flex items-center mb-6">
+        <i class="fas fa-film text-primary text-2xl mr-3"></i>
+        <h2 class="text-2xl font-bold text-white">影视天堂</h2>
+      </div>
+      <p class="text-gray-300 mb-4 leading-relaxed">
+        影视天堂成立于2023年，是一家致力于为用户提供高质量影视内容的在线平台。我们深知优秀的影视作品对人们生活的重要性，因此我们不断努力，为用户带来最优质的观影体验。
+      </p>
+      <p class="text-gray-300 mb-4 leading-relaxed">
+        我们的团队由一群热爱影视文化的专业人士组成，包括内容策划、技术开发、用户服务等各个领域的专家。我们相信，通过技术的力量和优质的内容，能够为用户创造更美好的娱乐生活。
+      </p>
+    </section>
+
+    <!-- 我们的使命 -->
+    <section class="bg-card-bg rounded-xl p-6 md:p-8 mb-8">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <i class="fas fa-bullseye text-primary mr-3"></i>
+        我们的使命
+      </h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="bg-primary bg-opacity-20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-users text-primary text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">服务用户</h3>
+          <p class="text-gray-400 text-sm">为亿万用户提供优质的影视内容和服务</p>
+        </div>
+        <div class="text-center">
+          <div class="bg-primary bg-opacity-20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-star text-primary text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">品质保证</h3>
+          <p class="text-gray-400 text-sm">精选高品质内容，确保最佳观影体验</p>
+        </div>
+        <div class="text-center">
+          <div class="bg-primary bg-opacity-20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-rocket text-primary text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">技术创新</h3>
+          <p class="text-gray-400 text-sm">运用先进技术，打造智能化观影平台</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 我们的优势 -->
+    <section class="bg-card-bg rounded-xl p-6 md:p-8 mb-8">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <i class="fas fa-trophy text-primary mr-3"></i>
+        我们的优势
+      </h2>
+      <div class="space-y-4">
+        <div class="flex items-start">
+          <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+          <div>
+            <h3 class="text-lg font-semibold text-white mb-1">海量内容库</h3>
+            <p class="text-gray-400">拥有超过10万部影视作品，涵盖电影、电视剧、动画、综艺等多种类型</p>
+          </div>
+        </div>
+        <div class="flex items-start">
+          <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+          <div>
+            <h3 class="text-lg font-semibold text-white mb-1">高清画质</h3>
+            <p class="text-gray-400">支持4K超高清播放，为您带来影院级的视觉享受</p>
+          </div>
+        </div>
+        <div class="flex items-start">
+          <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+          <div>
+            <h3 class="text-lg font-semibold text-white mb-1">多端同步</h3>
+            <p class="text-gray-400">支持手机、平板、电脑等多种设备，随时随地观看您喜爱的内容</p>
+          </div>
+        </div>
+        <div class="flex items-start">
+          <i class="fas fa-check-circle text-primary mr-3 mt-1"></i>
+          <div>
+            <h3 class="text-lg font-semibold text-white mb-1">智能推荐</h3>
+            <p class="text-gray-400">基于AI算法，为您推荐个性化的影视内容</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 团队介绍 -->
+    <section class="bg-card-bg rounded-xl p-6 md:p-8">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <i class="fas fa-users text-primary mr-3"></i>
+        我们的团队
+      </h2>
+      <p class="text-gray-300 mb-4">
+        我们的团队由200多名优秀的员工组成，包括技术研发、内容运营、市场营销、客户服务等各个领域的专业人才。我们致力于为用户提供最好的产品和服务体验。
+      </p>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-dark-bg rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-2">技术研发团队</h3>
+          <p class="text-gray-400 text-sm">负责平台开发、系统架构、用户体验优化等技术工作</p>
+        </div>
+        <div class="bg-dark-bg rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-2">内容运营团队</h3>
+          <p class="text-gray-400 text-sm">负责内容采购、审核、分类和推荐策略制定</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-card-bg py-6 md:py-8 mt-8 md:mt-12">
+    <div class="container mx-auto max-w-6xl px-4 md:px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0 text-center md:text-left">
+          <div class="flex items-center justify-center md:justify-start">
+            <i class="fas fa-film text-primary text-2xl mr-3"></i>
+            <h2 class="text-xl font-bold text-white">影视天堂</h2>
+          </div>
+          <p class="text-secondary mt-2 text-sm md:text-base">海量高清影视内容，随时随地观看</p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+          <a href="about.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">关于我们</a>
+          <a href="contact.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">联系方式</a>
+          <a href="terms.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">用户协议</a>
+          <a href="privacy.html" class="text-secondary hover:text-white transition-colors text-sm md:text-base">隐私政策</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-700 mt-6 md:mt-8 pt-4 md:pt-6 text-center text-secondary text-sm md:text-base">
+        <p>© 2025 影视天堂 版权所有 | 本网站仅供学习交流使用</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 回到顶部按钮 -->
+  <button id="backToTop"
+    class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-rose-500 transition-colors opacity-0 invisible transition-all duration-300">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    // 回到顶部按钮
+    const backToTopBtn = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'invisible');
+        backToTopBtn.classList.add('opacity-100', 'visible');
+      } else {
+        backToTopBtn.classList.remove('opacity-100', 'visible');
+        backToTopBtn.classList.add('opacity-0', 'invisible');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+  </script>
+</body>
+
+</html>

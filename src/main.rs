@@ -37,6 +37,7 @@ use actix_web::{
 use actix_web_flash_messages::{storage::CookieMessageStore, FlashMessagesFramework};
 use futures::stream::TryStreamExt;
 use mongodb::Database;
+use std::env;
 use std::future::{ready, Ready};
 use std::rc::Rc;
 
@@ -239,6 +240,11 @@ async fn main() -> std::io::Result<()> {
                 web::resource("/search")
                     .route(web::get().to(web_handlers::search_page_handler_wrapper)),
             )
+            // Static pages
+            .service(web::resource("/about").route(web::get().to(web_handlers::about_page)))
+            .service(web::resource("/contact").route(web::get().to(web_handlers::contact_page)))
+            .service(web::resource("/privacy").route(web::get().to(web_handlers::privacy_page)))
+            .service(web::resource("/terms").route(web::get().to(web_handlers::terms_page)))
             // Static files with cache configuration
             .service(
                 Files::new("/static", "./static")
@@ -431,7 +437,13 @@ async fn main() -> std::io::Result<()> {
                     ),
             )
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((
+        env::var("SERVER_HOST").unwrap_or("127.0.0.1".to_string()),
+        env::var("SERVER_PORT")
+            .unwrap_or("8080".to_string())
+            .parse()
+            .unwrap(),
+    ))?
     .run()
     .await
 }

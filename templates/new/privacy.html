@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}隐私政策 - {{ SITENAME }}{% endblock %}
+
+{% block description %}{{ SITENAME }}隐私政策，了解我们如何保护您的个人信息，信息收集、使用、共享和安全措施{% endblock %}
+
+{% block keywords %}隐私政策,{{ SITENAME }},个人信息保护,数据安全,Cookie使用,用户权利{% endblock %}
+
+{% block content %}
+<!-- 主要内容区域 -->
+<main class="container mx-auto max-w-4xl px-4 md:px-6 py-8 md:py-12">
+  <!-- 页面标题 -->
+  <section class="hero-bg rounded-xl p-8 md:p-12 mb-8 md:mb-12">
+    <div class="flex items-center mb-4">
+      <i class="fas fa-shield-alt text-primary text-3xl mr-4"></i>
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold text-white">隐私政策</h1>
+        <p class="text-gray-300 text-lg md:text-xl mt-2">我们如何保护您的个人信息</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 政策内容 -->
+  <div class="grid md:grid-cols-4 gap-8">
+    <!-- 目录 -->
+    <div class="md:col-span-1">
+      <div class="bg-card-bg rounded-xl p-4 sticky top-4">
+        <h3 class="text-lg font-semibold text-white mb-4">目录</h3>
+        <nav class="space-y-2">
+          <a href="#section1" class="toc-item block text-gray-300 hover:text-white text-sm py-1">1. 信息收集</a>
+          <a href="#section2" class="toc-item block text-gray-300 hover:text-white text-sm py-1">2. 信息使用</a>
+          <a href="#section3" class="toc-item block text-gray-300 hover:text-white text-sm py-1">3. 信息共享</a>
+          <a href="#section4" class="toc-item block text-gray-300 hover:text-white text-sm py-1">4. 信息安全</a>
+          <a href="#section5" class="toc-item block text-gray-300 hover:text-white text-sm py-1">5. Cookie使用</a>
+          <a href="#section6" class="toc-item block text-gray-300 hover:text-white text-sm py-1">6. 用户权利</a>
+          <a href="#section7" class="toc-item block text-gray-300 hover:text-white text-sm py-1">7. 第三方链接</a>
+          <a href="#section8" class="toc-item block text-gray-300 hover:text-white text-sm py-1">8. 政策更新</a>
+          <a href="#section9" class="toc-item block text-gray-300 hover:text-white text-sm py-1">9. 联系我们</a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- 详细内容 -->
+    <div class="md:col-span-3 space-y-6">
+      <section id="section1" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-database privacy-icon mr-3"></i>
+          1. 信息收集
+        </h2>
+        <p class="text-gray-300 mb-3">
+          我们收集以下类型的信息，以便为您提供更好的服务：
+        </p>
+        <div class="space-y-3">
+          <div>
+            <h4 class="font-semibold text-white mb-1">个人身份信息</h4>
+            <p class="text-gray-400 text-sm">姓名、邮箱地址、手机号码、注册信息等</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-white mb-1">使用信息</h4>
+            <p class="text-gray-400 text-sm">IP地址、设备信息、浏览器类型、访问时间、观看记录等</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-white mb-1">支付信息</h4>
+            <p class="text-gray-400 text-sm">支付方式、交易记录（加密存储）</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="section2" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-cogs privacy-icon mr-3"></i>
+          2. 信息使用
+        </h2>
+        <p class="text-gray-300 mb-3">
+          我们使用收集的信息用于以下目的：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1">
+          <li>提供和维护我们的服务</li>
+          <li>改进用户体验和功能</li>
+          <li>个性化内容推荐</li>
+          <li>客户服务和问题解决</li>
+          <li>安全监控和欺诈预防</li>
+          <li>法律合规和审计</li>
+        </ul>
+      </section>
+
+      <section id="section3" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-share-alt privacy-icon mr-3"></i>
+          3. 信息共享
+        </h2>
+        <p class="text-gray-300 mb-3">
+          我们不会出售、交易或转让您的个人信息，除非：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1 mb-3">
+          <li>获得您的明确同意</li>
+          <li>法律法规要求或政府机关要求</li>
+          <li>保护我们的合法权益</li>
+          <li>在合并、收购或资产出售时</li>
+          <li>与可信赖的服务提供商合作（需遵守保密义务）</li>
+        </ul>
+        <p class="text-gray-300">
+          所有第三方合作伙伴都必须签署严格的数据保护协议。
+        </p>
+      </section>
+
+      <section id="section4" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-lock privacy-icon mr-3"></i>
+          4. 信息安全
+        </h2>
+        <p class="text-gray-300 mb-3">
+          我们采取多种安全措施保护您的个人信息：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1 mb-3">
+          <li>SSL/TLS加密传输</li>
+          <li>数据加密存储</li>
+          <li>访问权限控制</li>
+          <li>定期安全审计</li>
+          <li>员工安全培训</li>
+        </ul>
+        <p class="text-gray-300">
+          虽然我们采用行业标准的安全措施，但请注意，没有任何互联网传输方法是100%安全的。
+        </p>
+      </section>
+
+      <section id="section5" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-cookie privacy-icon mr-3"></i>
+          5. Cookie使用
+        </h2>
+        <p class="text-gray-300 mb-3">
+          我们使用Cookie和类似技术来：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1 mb-3">
+          <li>记住您的登录状态</li>
+          <li>个性化您的浏览体验</li>
+          <li>分析网站使用情况</li>
+          <li>提供相关广告</li>
+        </ul>
+        <p class="text-gray-300">
+          您可以通过浏览器设置管理Cookie偏好，但可能会影响某些功能的使用。
+        </p>
+      </section>
+
+      <section id="section6" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-user-shield privacy-icon mr-3"></i>
+          6. 用户权利
+        </h2>
+        <p class="text-gray-300 mb-3">
+          您对个人信息拥有以下权利：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1 mb-3">
+          <li>访问和获取您的个人信息</li>
+          <li>更正不准确的信息</li>
+          <li>删除您的个人信息</li>
+          <li>撤回同意</li>
+          <li>数据可携权</li>
+          <li>投诉和举报权</li>
+        </ul>
+        <p class="text-gray-300">
+          如需行使上述权利，请联系我们的客服团队。
+        </p>
+      </section>
+
+      <section id="section7" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-external-link-alt privacy-icon mr-3"></i>
+          7. 第三方链接
+        </h2>
+        <p class="text-gray-300 mb-3">
+          我们的网站可能包含第三方链接。这些第三方网站有自己的隐私政策，我们不对第三方网站的隐私实践负责。
+        </p>
+        <p class="text-gray-300">
+          建议您在访问第三方网站时仔细阅读其隐私政策。
+        </p>
+      </section>
+
+      <section id="section8" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-sync-alt privacy-icon mr-3"></i>
+          8. 政策更新
+        </h2>
+        <p class="text-gray-300 mb-3">
+          我们可能会不时更新本隐私政策。更新后的政策将在网站上公布，并自公布之日起生效。
+        </p>
+        <p class="text-gray-300">
+          重大变更将通过邮件或网站通知等方式告知您。继续使用我们的服务即表示您接受更新后的隐私政策。
+        </p>
+      </section>
+
+      <section id="section9" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+          <i class="fas fa-envelope privacy-icon mr-3"></i>
+          9. 联系我们
+        </h2>
+        <p class="text-gray-300 mb-3">
+          如果您对本隐私政策有任何疑问或建议，请通过以下方式联系我们：
+        </p>
+        <div class="space-y-2">
+          <p class="text-gray-400">邮箱：privacy@{{ site_domain or 'yingshitiantang.com' }}</p>
+          <p class="text-gray-400">电话：400-123-4567</p>
+          <p class="text-gray-400">地址：北京市朝阳区建国路88号SOHO现代城</p>
+        </div>
+        <p class="text-gray-300 mt-3">
+          本隐私政策最后更新时间：2025年8月27日
+        </p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<style>
+  .toc-item {
+    transition: all 0.3s ease;
+  }
+
+  .toc-item:hover {
+    background-color: rgba(244, 63, 94, 0.1);
+    padding-left: 1rem;
+  }
+
+  .privacy-icon {
+    background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-bg {
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+      url('https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center 25%;
+    position: relative;
+  }
+</style>
+
+<script>
+  // 平滑滚动到锚点
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+</script>
+{% endblock %}

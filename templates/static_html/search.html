@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>搜索 - 影视天堂</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="navbar.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-bg': '#0f172a',
+            'card-bg': '#1e293b',
+            'primary': '#f43f5e',
+            'secondary': '#94a3b8'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    .search-header {
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+        url('background.avif');
+      background-size: cover;
+      background-position: center 25%;
+      position: relative;
+    }
+
+    .content-card {
+      transition: all 0.3s ease;
+      transform-origin: center bottom;
+    }
+
+    .content-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .filter-btn {
+      transition: all 0.3s ease;
+    }
+
+    .filter-btn.active {
+      background-color: #f43f5e;
+      color: white;
+    }
+
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+      .mobile-padding {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .mobile-text-lg {
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-text-xl {
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        min-height: 2.8rem;
+      }
+
+      .mobile-btn-sm {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+      }
+
+      .mobile-filter-container {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .mobile-filter-container::-webkit-scrollbar {
+        display: none;
+      }
+
+      .mobile-filter-item {
+        flex-shrink: 0;
+      }
+
+
+    }
+
+    .line-clamp-1 {
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 1;
+    }
+
+    .line-clamp-2 {
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+  </style>
+</head>
+
+<body class="bg-dark-bg">
+  <!-- 通用导航栏 -->
+  <div id="navbar-container"></div>
+
+  <script>
+    // 加载通用导航栏
+    fetch('navbar.html')
+      .then(response => response.text())
+      .then(html => {
+        document.getElementById('navbar-container').innerHTML = html;
+        // 加载导航栏JavaScript
+        const script = document.createElement('script');
+        script.src = 'navbar.js';
+        script.onload = function () {
+          // 确保脚本加载完成后初始化
+          if (typeof initMobileMenu === 'function') {
+            initMobileMenu();
+          }
+          if (typeof initDropdownMenu === 'function') {
+            initDropdownMenu();
+          }
+        };
+        document.head.appendChild(script);
+      })
+      .catch(error => console.error('Error loading navbar:', error));
+  </script>
+
+  <!-- 搜索头部区域 -->
+  <header class="search-header py-12 md:py-16 px-4 md:px-6">
+    <div class="container mx-auto max-w-3xl mobile-padding text-center">
+      <h1 class="mobile-text-xl md:text-3xl font-bold text-white mb-6">搜索影视内容</h1>
+
+      <!-- 搜索框 -->
+      <div class="relative max-w-2xl mx-auto">
+        <input type="text" placeholder="输入电影、电视剧、动画或综艺名称..."
+          class="w-full bg-card-bg text-white py-4 px-6 pr-16 rounded-full focus:outline-none focus:ring-2 focus:ring-primary text-lg">
+        <button
+          class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white bg-primary p-3 rounded-full hover:bg-rose-500 transition-colors">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+
+      <!-- 热门搜索标签 -->
+      <div class="mt-8">
+        <p class="text-secondary mb-3">热门搜索:</p>
+        <div class="flex flex-wrap justify-center gap-2">
+          <a href="#"
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full text-sm">复仇者联盟</a>
+          <a href="#"
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full text-sm">流浪地球</a>
+          <a href="#"
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full text-sm">鬼灭之刃</a>
+          <a href="#"
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full text-sm">长津湖</a>
+          <a href="#"
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full text-sm">鱿鱼游戏</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 搜索结果区域 -->
+  <main class="container mx-auto max-w-6xl px-4 md:px-6 py-8 md:py-10">
+    <!-- 结果统计和筛选 -->
+    <div class="bg-card-bg rounded-2xl p-4 md:p-6 mb-6 md:mb-8 shadow-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h2 class="mobile-text-lg md:text-xl font-bold">
+          搜索结果: <span class="text-primary">"科幻"</span>
+          <span class="text-secondary text-base font-normal ml-2">找到 86 个相关视频</span>
+        </h2>
+      </div>
+    </div>
+
+    <!-- 搜索结果列表 -->
+    <div class="mb-8">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+        <!-- 综艺卡片 1 -->
+        <div class="content-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative  aspect-[2/3]"">
+            <img
+              src="
+            https://images.unsplash.com/photo-1552674605-db6ffd4facb5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+            alt="综艺海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">更新至第8期</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">奔跑吧兄弟 第十季</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">真人秀, 竞技, 娱乐</p>
+          </div>
+        </div>
+
+        <!-- 综艺卡片 2 -->
+        <div class="content-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative  aspect-[2/3]"">
+            <img
+              src="
+            https://images.unsplash.com/photo-1571771014-14edb7ab6acf?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+            alt="综艺海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">更新至第12期</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">明星大侦探 第八季</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">悬疑, 推理, 真人秀</p>
+          </div>
+        </div>
+
+        <!-- 综艺卡片 3 -->
+        <div class="content-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative  aspect-[2/3]"">
+            <img
+              src="
+            https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+            alt="综艺海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">更新至第6期</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">向往的生活 第七季</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">真人秀, 生活, 美食</p>
+          </div>
+        </div>
+
+        <!-- 综艺卡片 4 -->
+        <div class="content-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative  aspect-[2/3]"">
+            <img
+              src="
+            https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+            alt="综艺海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">全10期</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">这！就是街舞 第六季</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">舞蹈, 竞技, 真人秀</p>
+          </div>
+        </div>
+
+        <!-- 综艺卡片 5 -->
+        <div class="content-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative  aspect-[2/3]"">
+            <img
+              src="
+            https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+            alt="综艺海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">更新至第10期</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">中国新说唱 2023</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">音乐, 竞技, 真人秀</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-card-bg py-6 md:py-8 mt-8 md:mt-12">
+    <div class="container mx-auto max-w-6xl px-4 md:px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0 text-center md:text-left">
+          <div class="flex items-center justify-center md:justify-start">
+            <i class="fas fa-film text-primary text-2xl mr-3"></i>
+            <h2 class="text-xl font-bold text-white">影视天堂</h2>
+          </div>
+          <p class="text-secondary mt-2 text-sm md:text-base">海量高清影视内容，随时随地观看</p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">关于我们</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">联系方式</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">用户协议</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">隐私政策</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-700 mt-6 md:mt-8 pt-4 md:pt-6 text-center text-secondary text-sm md:text-base">
+        <p>© 2025 影视天堂 版权所有 | 本网站仅供学习交流使用</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 回到顶部按钮 -->
+  <button id="backToTop"
+    class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-rose-500 transition-colors opacity-0 invisible transition-all duration-300">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    // 回到顶部按钮
+    const backToTopBtn = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'invisible');
+        backToTopBtn.classList.add('opacity-100', 'visible');
+      } else {
+        backToTopBtn.classList.remove('opacity-100', 'visible');
+        backToTopBtn.classList.add('opacity-0', 'invisible');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    // 移动端菜单交互已移至通用navbar.js中
+
+    // 筛选按钮交互
+    const filterButtons = document.querySelectorAll('.filter-btn');
+
+    filterButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        // 如果是"全部"按钮，取消其他按钮的active状态
+        if (button.textContent.trim() === '全部') {
+          const parent = button.closest('div');
+          parent.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active', 'bg-primary');
+            btn.classList.add('bg-slate-700');
+          });
+        } else {
+          // 找到同组的"全部"按钮并取消active状态
+          const parent = button.closest('div');
+          const allBtn = parent.querySelector('.filter-btn:first-child');
+          allBtn.classList.remove('active', 'bg-primary');
+          allBtn.classList.add('bg-slate-700');
+        }
+
+        // 切换当前按钮状态
+        button.classList.toggle('active');
+        if (button.classList.contains('active')) {
+          button.classList.remove('bg-slate-700');
+          button.classList.add('bg-primary');
+        } else {
+          button.classList.remove('bg-primary');
+          button.classList.add('bg-slate-700');
+
+          // 如果没有按钮被选中，则选中"全部"按钮
+          const parent = button.closest('div');
+          const activeButtons = parent.querySelectorAll('.filter-btn.active');
+          if (activeButtons.length === 0) {
+            const allBtn = parent.querySelector('.filter-btn:first-child');
+            allBtn.classList.add('active', 'bg-primary');
+            allBtn.classList.remove('bg-slate-700');
+          }
+        }
+      });
+    });
+
+    // 分页按钮交互
+    const paginationButtons = document.querySelectorAll('.pagination-btn:not(.disabled)');
+
+    paginationButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.pagination-btn').forEach(btn => {
+          btn.classList.remove('active', 'bg-primary');
+          if (!btn.classList.contains('disabled')) {
+            btn.classList.add('bg-slate-700');
+          }
+        });
+
+        if (!button.classList.contains('disabled')) {
+          button.classList.add('active', 'bg-primary');
+          button.classList.remove('bg-slate-700');
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

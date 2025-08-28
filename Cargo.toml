@@ -26,3 +26,5 @@ uuid = { version = "1.0", features = ["v4"] }
 image = "0.24"
 webp = "0.2"
 rand = "0.8"
+html-escape = "0.2"
+regex = "1.0"

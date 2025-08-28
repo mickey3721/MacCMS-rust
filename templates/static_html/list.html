@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>电影列表 - 电影天堂</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="navbar.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-bg': '#0f172a',
+            'card-bg': '#1e293b',
+            'primary': '#f43f5e',
+            'secondary': '#94a3b8'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    .movie-header {
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+        url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center 25%;
+      position: relative;
+    }
+
+    .filter-btn {
+      transition: all 0.3s ease;
+    }
+
+    .filter-btn.active {
+      background-color: #f43f5e;
+      color: white;
+    }
+
+    .movie-card {
+      transition: all 0.3s ease;
+      transform-origin: center bottom;
+    }
+
+    .movie-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .pagination-btn {
+      transition: all 0.3s ease;
+    }
+
+    .pagination-btn:hover:not(.disabled) {
+      background-color: #f43f5e;
+    }
+
+    .pagination-btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+      .mobile-padding {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .mobile-text-lg {
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-text-xl {
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        min-height: 2.8rem;
+      }
+
+      .mobile-btn-sm {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+      }
+
+      .mobile-filter-container {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .mobile-filter-container::-webkit-scrollbar {
+        display: none;
+      }
+
+      .mobile-filter-item {
+        flex-shrink: 0;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-dark-bg">
+  <!-- 通用导航栏 -->
+  <div id="navbar-container"></div>
+
+  <script>
+    // 加载通用导航栏
+    fetch('navbar.html')
+      .then(response => response.text())
+      .then(html => {
+        document.getElementById('navbar-container').innerHTML = html;
+        // 加载导航栏JavaScript
+        const script = document.createElement('script');
+        script.src = 'navbar.js';
+        script.onload = function () {
+          // 确保脚本加载完成后初始化
+          if (typeof initMobileMenu === 'function') {
+            initMobileMenu();
+          }
+          if (typeof initDropdownMenu === 'function') {
+            initDropdownMenu();
+          }
+        };
+        document.head.appendChild(script);
+      })
+      .catch(error => console.error('Error loading navbar:', error));
+  </script>
+
+  <!-- 主要内容区域 -->
+  <main class="container mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-8">
+    <!-- 筛选区域 -->
+    <div class="bg-card-bg rounded-2xl p-4 md:p-6 mb-6 md:mb-8 shadow-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+        <h2 class="mobile-text-lg md:text-xl font-bold">筛选条件</h2>
+
+        <!-- 排序选择 -->
+        <div class="flex items-center">
+          <span class="text-secondary mr-2">排序:</span>
+          <select
+            class="bg-slate-800 text-white py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm md:text-base">
+            <option value="latest">最新发布</option>
+            <option value="views">最高播放</option>
+            <option value="year-desc">年份从新到旧</option>
+            <option value="year-asc">年份从旧到新</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 分类筛选 -->
+      <div class="mb-5">
+        <h3 class="text-secondary mb-3 font-medium">分类</h3>
+        <div class="flex flex-wrap mobile-filter-container gap-2">
+          <button
+            class="filter-btn active bg-primary text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            全部
+          </button>
+          <button
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            动作
+          </button>
+          <button
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            喜剧
+          </button>
+          <button
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            爱情
+          </button>
+          <button
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            科幻
+          </button>
+          <button
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            恐怖
+          </button>
+          <button
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            悬疑
+          </button>
+          <button
+            class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item">
+            动画
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-5">
+        <!-- 地区筛选 -->
+        <div>
+          <h3 class="text-secondary mb-3 font-medium">地区</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active bg-primary text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              全部
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              华语
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              欧美
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              日韩
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              其他
+            </button>
+          </div>
+        </div>
+
+        <!-- 年份筛选 -->
+        <div>
+          <h3 class="text-secondary mb-3 font-medium">年份</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active bg-primary text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              全部
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              2023
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              2022
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              2021
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              2020
+            </button>
+            <button
+              class="filter-btn bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm">
+              更早
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 电影列表 -->
+    <div class="mb-8">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="mobile-text-lg md:text-xl font-bold">热门电影</h2>
+        <span class="text-secondary text-sm md:text-base">共找到 248 部影片</span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+        <!-- 电影卡片 1 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">我知道你去年夏天干了什么</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">恐怖, 悬疑, 惊悚</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 2 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1542204165-65bf26472b9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">星际穿越：重生</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">科幻, 冒险</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 3 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1489599102910-59206b8ca314?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">城市之光</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">剧情, 爱情</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 4 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1574267432553-4b4628081c31?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">极限特工</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">动作, 冒险</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 5 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1594909122845-11baa439b7bf?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">奇幻森林</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">奇幻, 家庭</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 6 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1590179068383-b9c69aacebd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">暗夜追凶</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">犯罪, 悬疑</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 7 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1515634928627-2a4e0dae3ddf?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">喜剧之王</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">喜剧, 剧情</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 8 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1478720568477-b840004f9ac5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">末日之战</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">动作, 科幻</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 9 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1543536448-d209d2d13a1c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">盗梦空间2</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">科幻, 惊悚</p>
+          </div>
+        </div>
+
+        <!-- 电影卡片 10 -->
+        <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+          <div class="relative aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="电影海报" class="w-full h-full object-cover">
+            <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">HD</div>
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+              <div class="flex justify-between items-center text-xs">
+                <span>2023</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">古墓丽影：起源</h3>
+            <p class="text-secondary text-xs md:text-sm line-clamp-1">冒险, 动作</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分页 -->
+    <div class="flex justify-center mt-8">
+      <div class="flex items-center space-x-2 bg-card-bg rounded-xl p-2 shadow-lg">
+        <button class="pagination-btn disabled bg-slate-700 text-white p-2 rounded-lg">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="pagination-btn active bg-primary text-white w-10 h-10 rounded-lg">1</button>
+        <button class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white w-10 h-10 rounded-lg">2</button>
+        <button class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white w-10 h-10 rounded-lg">3</button>
+        <button class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white w-10 h-10 rounded-lg">4</button>
+        <button class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg">...</button>
+        <button class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white w-10 h-10 rounded-lg">10</button>
+        <button class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-card-bg py-6 md:py-8 mt-8 md:mt-12">
+    <div class="container mx-auto max-w-6xl px-4 md:px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0 text-center md:text-left">
+          <div class="flex items-center justify-center md:justify-start">
+            <i class="fas fa-film text-primary text-2xl mr-3"></i>
+            <h2 class="text-xl font-bold text-white">电影天堂</h2>
+          </div>
+          <p class="text-secondary mt-2 text-sm md:text-base">海量高清电影，随时随地观看</p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">关于我们</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">联系方式</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">用户协议</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">隐私政策</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-700 mt-6 md:mt-8 pt-4 md:pt-6 text-center text-secondary text-sm md:text-base">
+        <p>© 2025 电影天堂 版权所有 | 本网站仅供学习交流使用</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 回到顶部按钮 -->
+  <button id="backToTop"
+    class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-rose-500 transition-colors opacity-0 invisible transition-all duration-300">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    // 回到顶部按钮
+    const backToTopBtn = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'invisible');
+        backToTopBtn.classList.add('opacity-100', 'visible');
+      } else {
+        backToTopBtn.classList.remove('opacity-100', 'visible');
+        backToTopBtn.classList.add('opacity-0', 'invisible');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    // 筛选按钮交互
+    const filterButtons = document.querySelectorAll('.filter-btn');
+
+    filterButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        // 如果是"全部"按钮，取消其他按钮的active状态
+        if (button.textContent.trim() === '全部') {
+          const parent = button.closest('div');
+          parent.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active', 'bg-primary');
+            btn.classList.add('bg-slate-700');
+          });
+        } else {
+          // 找到同组的"全部"按钮并取消active状态
+          const parent = button.closest('div');
+          const allBtn = parent.querySelector('.filter-btn:first-child');
+          allBtn.classList.remove('active', 'bg-primary');
+          allBtn.classList.add('bg-slate-700');
+        }
+
+        // 切换当前按钮状态
+        button.classList.toggle('active');
+        if (button.classList.contains('active')) {
+          button.classList.remove('bg-slate-700');
+          button.classList.add('bg-primary');
+        } else {
+          button.classList.remove('bg-primary');
+          button.classList.add('bg-slate-700');
+
+          // 如果没有按钮被选中，则选中"全部"按钮
+          const parent = button.closest('div');
+          const activeButtons = parent.querySelectorAll('.filter-btn.active');
+          if (activeButtons.length === 0) {
+            const allBtn = parent.querySelector('.filter-btn:first-child');
+            allBtn.classList.add('active', 'bg-primary');
+            allBtn.classList.remove('bg-slate-700');
+          }
+        }
+      });
+    });
+
+    // 分页按钮交互
+    const paginationButtons = document.querySelectorAll('.pagination-btn:not(.disabled)');
+
+    paginationButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.pagination-btn').forEach(btn => {
+          btn.classList.remove('active', 'bg-primary');
+          if (!btn.classList.contains('disabled')) {
+            btn.classList.add('bg-slate-700');
+          }
+        });
+
+        if (!button.classList.contains('disabled')) {
+          button.classList.add('active', 'bg-primary');
+          button.classList.remove('bg-slate-700');
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

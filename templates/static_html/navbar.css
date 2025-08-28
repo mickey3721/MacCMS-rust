@@ -1,0 +1,493 @@
+/* 通用导航栏样式 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+/* 基础样式 */
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+/* 导航栏样式 */
+.navbar {
+  background-color: #1e293b;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 768px) {
+  .navbar {
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Logo区域 */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-brand a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.navbar-logo {
+  color: #f43f5e;
+  font-size: 1.25rem;
+  margin-right: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .navbar-logo {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+  }
+}
+
+.navbar-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+}
+
+@media (min-width: 768px) {
+  .navbar-title {
+    font-size: 1.25rem;
+  }
+}
+
+/* PC端导航链接 */
+.navbar-nav {
+  display: none;
+  align-items: center;
+  margin-left: 1.5rem;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .navbar-nav {
+    display: flex;
+  }
+}
+
+.navbar-nav a {
+  background-color: #475569;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.navbar-nav a:hover {
+  background-color: #64748b;
+}
+
+/* 右侧操作区域 */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .navbar-actions {
+    gap: 1rem;
+  }
+}
+
+/* 搜索按钮 */
+.navbar-search {
+  display: none;
+  align-items: center;
+  color: #f43f5e;
+  text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .navbar-search {
+    display: flex;
+  }
+}
+
+.navbar-search i {
+  margin-right: 0.25rem;
+}
+
+/* 播放记录下拉菜单 */
+.dropdown {
+  position: relative;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .dropdown {
+    display: block;
+  }
+}
+
+.dropdown-toggle {
+  background-color: #475569;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-toggle:hover {
+  background-color: #64748b;
+}
+
+.dropdown-toggle i:first-child {
+  margin-right: 0.5rem;
+}
+
+.dropdown-toggle i:last-child {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.5rem;
+  width: 16rem;
+  background-color: #1e293b;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+  padding: 0.5rem 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-header {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #475569;
+}
+
+.dropdown-header h3 {
+  font-weight: 700;
+  margin: 0;
+  color: white;
+}
+
+.dropdown-content {
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 0.75rem 1rem;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #475569;
+}
+
+.dropdown-item-content {
+  display: flex;
+}
+
+.dropdown-item-thumb {
+  width: 4rem;
+  height: 2.5rem;
+  background-color: #64748b;
+  border-radius: 0.25rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.dropdown-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-item-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0 0 0.25rem 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.dropdown-item-progress {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.dropdown-footer {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #475569;
+}
+
+.dropdown-footer a {
+  color: #f43f5e;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.dropdown-footer a:hover {
+  text-decoration: underline;
+}
+
+/* 移动端菜单按钮 */
+.mobile-menu-btn {
+  display: block;
+  background: none;
+  border: none;
+  color: white;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .mobile-menu-btn {
+    display: none;
+  }
+}
+
+.mobile-menu-btn i {
+  font-size: 1.25rem;
+}
+
+/* 登录按钮 */
+.login-btn {
+  background-color: #f43f5e;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .login-btn {
+    padding: 0.5rem 1rem;
+  }
+}
+
+.login-btn:hover {
+  background-color: #e11d48;
+}
+
+.login-btn i {
+  margin-right: 0.25rem;
+}
+
+@media (min-width: 768px) {
+  .login-btn i {
+    margin-right: 0.5rem;
+  }
+}
+
+.login-btn span {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .login-btn span {
+    display: inline;
+  }
+}
+
+/* 移动端导航菜单 */
+.mobile-nav {
+  display: block;
+  /* 轻微上移用于小幅度进入动画 */
+  transform: translateY(-10px);
+  opacity: 0;
+  visibility: hidden;
+  /* 固定定位，确保在视口内且跟随页面 */
+  position: fixed;
+  top: 56px; /* 导航栏高度，必要时可根据实际高度微调 */
+  left: 0;
+  right: 0;
+  background: #1e293b;
+  transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 40;
+  max-height: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .mobile-nav {
+    display: none;
+  }
+}
+
+.mobile-nav.show {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  max-height: 500px;
+}
+
+.mobile-nav-content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mobile-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mobile-nav-links a {
+  background-color: #475569;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.mobile-nav-links a:hover {
+  background-color: #64748b;
+}
+
+/* 移动端搜索框 */
+.mobile-search {
+  position: relative;
+}
+
+.mobile-search input {
+  width: 100%;
+  background-color: #475569;
+  color: white;
+  padding: 0.5rem 1rem;
+  padding-right: 2.5rem;
+  border-radius: 9999px;
+  border: none;
+  outline: none;
+}
+
+.mobile-search input:focus {
+  ring: 2px solid #f43f5e;
+}
+
+.mobile-search button {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.mobile-search button:hover {
+  color: #f43f5e;
+}
+
+/* 移动端播放记录 */
+.mobile-history {
+  color: white;
+}
+
+.mobile-history h3 {
+  font-weight: 500;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+}
+
+.mobile-history h3 i {
+  margin-right: 0.5rem;
+}
+
+.mobile-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-history-item {
+  display: block;
+  padding: 0.5rem;
+  background-color: #475569;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.mobile-history-item:hover {
+  background-color: #64748b;
+}
+
+.mobile-history-item-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0 0 0.25rem 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.mobile-history-item-progress {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* 工具类 */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

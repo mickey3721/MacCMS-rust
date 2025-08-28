@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}{{ video.vod_name }} - 在线播放 - {{ SITENAME }}{% endblock %}
+
+{% block description %}{{ video.vod_name }}在线播放，{{ video.vod_content }}{% endblock %}
+
+{% block keywords %}{{ video.vod_name }},在线播放,{{ video.vod_class }},{{ video.vod_year }},{{ video.vod_area }}{% endblock
+%}
+
+{% block content %}
+<!-- 主要内容区域 -->
+<main class="container mx-auto max-w-6xl px-4 md:px-6 py-8 md:py-10">
+
+    <!-- 面包屑导航 -->
+    <nav class="mb-4 md:mb-6">
+        <div class="flex items-center space-x-2 text-sm md:text-base text-secondary">
+            <a href="/" class="hover:text-primary transition-colors">
+                <i class="fas fa-home mr-1"></i>首页
+            </a>
+            <i class="fas fa-chevron-right text-xs"></i>
+            <a href="/detail/{{ video._id['$oid'] }}" class="hover:text-primary transition-colors">
+                {{ video.vod_name }}
+            </a>
+            <i class="fas fa-chevron-right text-xs"></i>
+            <span class="text-white">在线播放</span>
+        </div>
+    </nav>
+
+    <!-- 播放器区域 -->
+    <section class="bg-card-bg rounded-2xl p-5 md:p-6 mb-6 md:mb-10 shadow-xl">
+        <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center">
+            <i class="fas fa-play-circle text-primary mr-3"></i>{{ video.vod_name }} 在线播放
+        </h2>
+
+        <!-- 视频播放器 -->
+        <div class="video-container">
+            <!-- Video Element -->
+            <video id="video-player" class="video-player" preload="metadata"
+                poster="{{ video.vod_pic | default(value='https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80') }}"
+                controls playsinline>
+                <source src="{{ play_url | safe }}"
+                    type="{% if play_url | split(pat='.') | last == 'm3u8' %}application/x-mpegURL{% else %}video/mp4{% endif %}">
+                <p class="text-white text-center p-8">
+                    您的浏览器不支持视频播放。<br>
+                    请使用最新版本的Chrome、Firefox、Safari或Edge浏览器。
+                </p>
+            </video>
+        </div>
+
+        <style>
+            .video-container {
+                position: relative;
+                width: 100%;
+                padding-top: 56.25%;
+                /* 16:9 宽高比 */
+                background: #000;
+                border-radius: 12px;
+                overflow: hidden;
+                margin-bottom: 1rem;
+            }
+
+            .video-player {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: #000;
+            }
+
+            .episode-controls {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 1rem;
+            }
+
+            .episode-btn {
+                background: #1e293b;
+                color: white;
+                border: none;
+                padding: 0.5rem 1.5rem;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .episode-btn:hover {
+                background: #2d3748;
+            }
+
+            .episode-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            /* 移动端优化样式 */
+            @media (max-width: 768px) {
+                .episode-controls {
+                    flex-direction: flex;
+                    gap: 1rem;
+                    align-items: center;
+                }
+
+                .episode-btn {
+                    justify-content: center;
+                    padding: 0.75rem 1.5rem;
+                    font-size: 1rem;
+                    min-height: 3rem;
+                }
+            }
+        </style>
+
+        <!-- 剧集控制 -->
+        <div class="episode-controls">
+            <button class="episode-btn" id="prevEpisode" {% if play_index==0 %}disabled{% endif %}{% if play_index> 0 %}
+                data-url="/play/{{ video._id }}/{{ play_source }}-{{ play_index - 1 }}"{% endif %}>
+                <i class="fas fa-chevron-left"></i> 上一集
+            </button>
+
+            <div class="text-secondary hidden md:block">
+                当前播放: <span class="text-white font-medium">{% if current_episode_name %}{{ current_episode_name }}{%
+                    else %}第1集{% endif %}</span>
+            </div>
+
+            <button class="episode-btn" id="nextEpisode" {% if play_index>= video.vod_play_urls[play_source].urls|length
+                - 1 %}disabled{% endif %}{% if play_index < video.vod_play_urls[play_source].urls|length - 1 %}
+                    data-url="/play/{{ video._id }}/{{ play_source }}-{{ play_index + 1 }}" {% endif %}>
+                    下一集 <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </section>
+
+    <section class="bg-card-bg rounded-2xl p-5 md:p-6 mb-6 md:mb-10 shadow-xl">
+        <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center">
+            <i class="fas fa-play-circle text-primary mr-3"></i>播放源
+        </h2>
+
+        <!-- 播放源选项卡 -->
+        <div class="mb-4 border-b border-slate-700">
+            <div class="flex flex-wrap -mb-px">
+                {% for source in video.vod_play_urls %}
+                <button
+                    class="tab-btn {% if loop.index0 == play_source %}active{% endif %} px-3 py-2 md:px-4 font-medium border-b-2 {% if loop.index0 == play_source %}border-primary text-primary{% else %}border-transparent text-secondary hover:text-white{% endif %} transition-colors text-sm md:text-base">
+                    {{ source.source_name }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 播放源内容 -->
+        <div class="space-y-4">
+            {% for source in video.vod_play_urls %}
+            {% set source_index = loop.index0 %}
+            <div class="tab-content {% if loop.index0 == play_source %}active{% else %}hidden{% endif %}">
+                <div
+                    class="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary scrollbar-track-slate-800">
+                    <div class="flex flex-wrap gap-2">
+                        {% for episode in source.urls %}
+                        <a href="/play/{{ video._id }}/{{ source_index }}-{{ loop.index0 }}"
+                            class="{% if source_index == play_source and loop.index0 == play_index %}bg-primary hover:bg-primary-dark{% else %}bg-slate-800 hover:bg-slate-700{% endif %} rounded px-3 py-2 transition-colors">
+                            {{ episode.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 剧情简介 -->
+    <section class="bg-card-bg rounded-2xl p-5 md:p-6 mb-6 md:mb-10 shadow-xl">
+        <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 flex items-center">
+            <i class="fas fa-book-open text-primary mr-3"></i>剧情简介
+        </h2>
+        <p class="mobile-text-lg leading-relaxed text-gray-300">
+            {{ video.vod_content | safe }}
+        </p>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <!-- 左侧：详细信息 -->
+        <div class="lg:col-span-1">
+            <div class="bg-card-bg rounded-2xl p-5 md:p-6 shadow-xl mb-6 md:mb-8">
+                <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center">
+                    <i class="fas fa-info-circle text-primary mr-3"></i>详细信息
+                </h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between pb-3 border-b border-slate-700">
+                        <span class="text-secondary text-sm md:text-base">语言:</span>
+                        <span class="font-medium text-sm md:text-base">{{ video.vod_lang }}</span>
+                    </div>
+                    <div class="flex justify-between pb-3 border-b border-slate-700">
+                        <span class="text-secondary text-sm md:text-base">类型:</span>
+                        <span class="font-medium text-sm md:text-base">{{ video.vod_class }}</span>
+                    </div>
+                    <div class="flex justify-between pb-3 border-b border-slate-700">
+                        <span class="text-secondary text-sm md:text-base">状态:</span>
+                        <span class="font-medium text-sm md:text-base">{{ video.vod_remarks }}</span>
+                    </div>
+                    <div class="flex justify-between pb-3 border-b border-slate-700">
+                        <span class="text-secondary text-sm md:text-base">地区:</span>
+                        <span class="font-medium text-sm md:text-base">{{ video.vod_area }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-secondary text-sm md:text-base">年份:</span>
+                        <span class="font-medium text-sm md:text-base">{{ video.vod_year }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：相关推荐 -->
+        <div class="lg:col-span-2">
+            <div class="bg-card-bg rounded-2xl p-5 md:p-6 shadow-xl">
+                <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center">
+                    <i class="fas fa-thumbs-up text-primary mr-3"></i>相关推荐
+                </h2>
+                <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+                    {% for rec_movie in recommended_movies %}
+                    <div class="recommendation-card bg-slate-800 rounded-xl overflow-hidden">
+                        <a href="/detail/{{ rec_movie._id['$oid'] }}" class="block">
+                            <div class="relative aspect-[2/3]">
+                                <img src="{{ rec_movie.vod_pic }}" alt="{{ rec_movie.vod_name }}"
+                                    class="w-full h-full object-cover">
+                                <div
+                                    class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">
+                                    {{ rec_movie.vod_remarks | default(value='HD') }}</div>
+                                <div
+                                    class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span>{{ rec_movie.vod_year }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4">
+                                <h3 class="font-bold text-sm md:text-base mb-1">{{ rec_movie.vod_name }}</h3>
+                                <div class="flex justify-between text-xs md:text-sm text-secondary">
+                                    <span>{{ rec_movie.vod_year }}</span>
+                                    <span>{{ rec_movie.vod_class }}</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 回到顶部按钮 -->
+<button id="backToTop"
+    class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg opacity-0 invisible transition-all duration-300 hover:bg-primary-dark z-50">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<!-- HLS.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<script>
+    // HLS player instance
+    let hls = null;
+
+    // Initialize player
+    document.addEventListener('DOMContentLoaded', function () {
+        initPlayer();
+        initTabSwitching();
+        initPlayHistory();
+    });
+
+    // Initialize play history tracking
+    function initPlayHistory() {
+        // Add current video to play history using localStorage only
+        const videoData = {
+            id: "{{ video._id['$oid'] }}",
+            name: "{{ video.vod_name }}",
+            episode: "{% if current_episode_name %}{{ current_episode_name }}{% else %}第1集{% endif %}",
+            url: window.location.href,
+            poster: "{{ video.vod_pic }}",
+            year: "{{ video.vod_year }}",
+            class: "{{ video.vod_class }}"
+        };
+        
+        // Store to localStorage directly
+        let playHistory = JSON.parse(localStorage.getItem('video_play_history') || '[]');
+        playHistory = playHistory.filter(item => item.id !== videoData.id);
+        playHistory.unshift({
+            id: videoData.id,
+            name: videoData.name,
+            episode: videoData.episode,
+            url: videoData.url,
+            poster: videoData.poster,
+            watchTime: new Date().toLocaleString()
+        });
+        playHistory = playHistory.slice(0, 10);
+        localStorage.setItem('video_play_history', JSON.stringify(playHistory));
+    }
+
+    // Initialize HLS player
+    function initPlayer() {
+        const video = document.getElementById('video-player');
+        const videoSrc = video.querySelector('source').src;
+
+        // Check if the video source is an m3u8 file
+        if (videoSrc.includes('.m3u8')) {
+            // Use HLS.js for m3u8 files
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
+
+                hls.loadSource(videoSrc);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                    console.log('HLS manifest loaded, found ' + hls.levels.length + ' quality levels');
+                });
+
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    console.error('HLS error:', data);
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log('Network error, trying to recover...');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('Media error, trying to recover...');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                console.log('Fatal error, cannot recover');
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS support (Safari)
+                video.src = videoSrc;
+            } else {
+                console.error('HLS is not supported in this browser');
+            }
+        } else {
+            // For non-HLS videos, use native video element
+            console.log('Using native video playback for:', videoSrc);
+        }
+    }
+
+    function initTabSwitching() {
+        // Tab switching functionality
+        const playerTabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        playerTabBtns.forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all tabs and contents
+                playerTabBtns.forEach(tab => {
+                    tab.classList.remove('active', 'border-primary', 'text-primary');
+                    tab.classList.add('border-transparent', 'text-secondary');
+                });
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                    content.classList.remove('active');
+                });
+
+                // Add active class to clicked tab and corresponding content
+                btn.classList.add('active', 'border-primary', 'text-primary');
+                btn.classList.remove('border-transparent', 'text-secondary');
+                tabContents[index].classList.remove('hidden');
+                tabContents[index].classList.add('active');
+            });
+        });
+    }
+
+    // 剧集控制功能
+    const prevBtn = document.getElementById('prevEpisode');
+    const nextBtn = document.getElementById('nextEpisode');
+
+    // 添加事件监听器
+    if (prevBtn && !prevBtn.disabled) {
+        prevBtn.addEventListener('click', () => {
+            const prevUrl = prevBtn.getAttribute('data-url');
+            if (prevUrl) {
+                window.location.href = prevUrl;
+            }
+        });
+    }
+
+    if (nextBtn && !nextBtn.disabled) {
+        nextBtn.addEventListener('click', () => {
+            const nextUrl = nextBtn.getAttribute('data-url');
+            if (nextUrl) {
+                window.location.href = nextUrl;
+            }
+        });
+    }
+
+    // Cleanup HLS instance on page unload
+    window.addEventListener('beforeunload', function () {
+        if (hls) {
+            hls.destroy();
+            hls = null;
+        }
+    });
+
+</script>
+{% endblock %}
