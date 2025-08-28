@@ -1,6 +1,6 @@
+use dotenv::dotenv;
 use mongodb::{Client, Database};
 use std::env;
-use dotenv::dotenv;
 
 pub async fn init() -> Result<Database, mongodb::error::Error> {
     dotenv().ok(); // This line loads the .env file

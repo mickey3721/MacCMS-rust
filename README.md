@@ -4,10 +4,7 @@
 
 ## 视频截图
 
-<video controls>
-  <source src="screenshot.mp4" type="video/mp4">
-  你的浏览器不支持视频播放。
-</video>
+<video src="https://raw.githubusercontent.com/TFTG-CLOUD/MacCMS-rust/refs/heads/main/screenshot.mp4" controls></video>
 
 ## 🚀 项目简介
 

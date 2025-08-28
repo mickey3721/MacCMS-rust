@@ -18,12 +18,12 @@ description %}
             <!-- 排序选择 -->
             <div class="flex items-center">
                 <span class="text-secondary mr-2">排序:</span>
-                <select
+                <select id="sortSelect" onchange="handleSortChange()"
                     class="bg-slate-800 text-white py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm md:text-base">
-                    <option value="latest">最新发布</option>
-                    <option value="views">最高播放</option>
-                    <option value="year-desc">年份从新到旧</option>
-                    <option value="year-asc">年份从旧到新</option>
+                    <option value="">最新发布</option>
+                    <option value="hits" {% if current_sort=="hits" %}selected{% endif %}>最高播放</option>
+                    <option value="year_desc" {% if current_sort=="year_desc" %}selected{% endif %}>年份从新到旧</option>
+                    <option value="year_asc" {% if current_sort=="year_asc" %}selected{% endif %}>年份从旧到新</option>
                 </select>
             </div>
         </div>
@@ -286,22 +286,26 @@ description %}
         });
     });
 
-    // 排序选择变化时自动提交表单
-    const sortSelect = document.querySelector('select');
-    if (sortSelect) {
-        sortSelect.addEventListener('change', function () {
-            // 将排序参数添加到表单中
-            const form = document.getElementById('filterForm');
-            let sortInput = form.querySelector('input[name="sort"]');
-            if (!sortInput) {
-                sortInput = document.createElement('input');
-                sortInput.type = 'hidden';
-                sortInput.name = 'sort';
-                form.appendChild(sortInput);
-            }
-            sortInput.value = this.value;
-            form.submit();
-        });
+    function handleSortChange() {
+        const sortSelect = document.getElementById('sortSelect');
+        const sortValue = sortSelect.value;
+
+        // Get current URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Update or add sort parameter
+        if (sortValue) {
+            urlParams.set('sort', sortValue);
+        } else {
+            urlParams.delete('sort');
+        }
+
+        // Keep page 1 when sorting changes
+        urlParams.delete('pg');
+
+        // Navigate to new URL
+        const newUrl = window.location.pathname + '?' + urlParams.toString();
+        window.location.href = newUrl;
     }
 </script>
 {% endblock %}
