@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我知道你去年夏天干了什么 - 电影详情</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="navbar.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-bg': '#0f172a',
+            'card-bg': '#1e293b',
+            'primary': '#f43f5e',
+            'secondary': '#94a3b8'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    .movie-header {
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+        url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center 25%;
+      position: relative;
+    }
+
+    .poster-container {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      transition: transform 0.3s ease;
+    }
+
+    .poster-container:hover {
+      transform: translateY(-5px);
+    }
+
+    .poster-container::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40%;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      pointer-events: none;
+    }
+
+    .genre-tag {
+      transition: all 0.2s ease;
+    }
+
+    .genre-tag:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    .cast-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: #f43f5e #1e293b;
+    }
+
+    .cast-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .cast-scroll::-webkit-scrollbar-track {
+      background: #1e293b;
+      border-radius: 10px;
+    }
+
+    .cast-scroll::-webkit-scrollbar-thumb {
+      background: #f43f5e;
+      border-radius: 10px;
+    }
+
+    .recommendation-card {
+      transition: all 0.3s ease;
+      transform-origin: center bottom;
+    }
+
+    .recommendation-card:hover {
+      transform: scale(1.05);
+      z-index: 10;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    }
+
+    .play-btn {
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.3);
+    }
+
+    .play-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.4);
+    }
+
+    .info-item {
+      border-bottom: 1px solid #334155;
+      padding: 12px 0;
+    }
+
+    .info-item:last-child {
+      border-bottom: none;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+      .mobile-padding {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .mobile-text-lg {
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-text-xl {
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-text-2xl {
+        font-size: 1.5rem;
+        line-height: 2rem;
+      }
+
+      .mobile-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        min-height: 3rem;
+      }
+
+      .mobile-btn-sm {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        min-height: 2.6rem;
+      }
+
+      .mobile-mb-4 {
+        margin-bottom: 1rem;
+      }
+
+      .mobile-mb-6 {
+        margin-bottom: 1.5rem;
+      }
+
+      .mobile-py-6 {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+      }
+
+      .mobile-gap-3 {
+        gap: 0.75rem;
+      }
+
+      .recommendation-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        height: 2.8rem;
+        line-height: 1.4rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-dark-bg">
+  <!-- 引入通用导航栏 -->
+  <div id="navbar-container"></div>
+
+  <script>
+    // 加载通用导航栏
+    fetch('navbar.html')
+      .then(response => response.text())
+      .then(html => {
+        document.getElementById('navbar-container').innerHTML = html;
+        // 加载导航栏JavaScript
+        const script = document.createElement('script');
+        script.src = 'navbar.js';
+        script.onload = function () {
+          // 确保脚本加载完成后初始化
+          if (typeof initMobileMenu === 'function') {
+            initMobileMenu();
+          }
+          if (typeof initDropdownMenu === 'function') {
+            initDropdownMenu();
+          }
+        };
+        document.head.appendChild(script);
+      })
+      .catch(error => console.error('Error loading navbar:', error));
+  </script>
+
+  <!-- 电影头部区域 -->
+  <header class="movie-header py-6 md:py-12 px-4 md:px-6">
+    <div class="container mx-auto max-w-6xl mobile-padding">
+      <div class="flex flex-col lg:flex-row gap-4 md:gap-10 items-start">
+        <!-- 海报区域 -->
+        <div class="w-full lg:w-1/4 mx-auto max-w-xs mb-4 md:mb-0">
+          <div class="poster-container aspect-[2/3]">
+            <img
+              src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+              alt="我知道你去年夏天干了什么" class="w-full h-full object-cover">
+            <div class="absolute bottom-0 left-0 right-0 z-10 p-4 text-white">
+              <div class="flex flex-wrap gap-2 mb-2">
+                <span class="bg-primary px-3 py-1 rounded-full text-xs font-bold">恐怖</span>
+                <span class="bg-rose-600 px-3 py-1 rounded-full text-xs font-bold">惊悚</span>
+                <span class="bg-purple-600 px-3 py-1 rounded-full text-xs font-bold">悬疑</span>
+              </div>
+              <h3 class="text-xl font-bold">HD</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- 电影信息区域 -->
+        <div class="w-full lg:w-2/3">
+          <h1 class="mobile-text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-2">我知道你去年夏天干了什么</h1>
+          <div class="flex flex-wrap items-center gap-3 mb-4 md:mb-6">
+            <span class="bg-cyan-600 px-3 py-1 rounded-full text-sm font-medium">2025</span>
+            <span class="bg-amber-600 px-3 py-1 rounded-full text-sm font-medium">美国</span>
+            <span class="bg-rose-600 px-3 py-1 rounded-full text-sm font-medium">动作片</span>
+          </div>
+
+          <div class="mb-4 md:mb-6">
+            <h2 class="mobile-text-xl font-semibold mb-3 flex items-center">
+              <i class="fas fa-user-tie text-primary mr-2"></i>导演
+            </h2>
+            <div class="flex flex-wrap gap-2">
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm">詹尼弗·凯廷·罗宾逊</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm">以利沙·克里斯蒂安</span>
+            </div>
+          </div>
+
+          <div class="mb-4 md:mb-6">
+            <h2 class="mobile-text-xl font-semibold mb-3 flex items-center">
+              <i class="fas fa-users text-primary mr-2"></i>主演
+            </h2>
+            <div class="cast-scroll overflow-x-auto pb-3 flex gap-2">
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">玛德琳·克莱因</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">蔡斯·苏·旺德斯</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">乔纳·豪尔-金</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">小弗雷迪·普林兹</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">詹妮弗·洛芙·休伊特</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">泰里克·威瑟斯</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">比利·坎贝尔</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">尼古拉斯·亚历山大·查韦斯</span>
+              <span class="bg-card-bg px-3 py-1 rounded-full text-sm whitespace-nowrap">奥斯汀·尼可斯</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-3 mb-4 md:mb-6">
+            <button
+              class="play-btn bg-primary hover:bg-rose-500 text-white px-6 py-3 md:px-8 rounded-full font-bold text-base md:text-lg flex items-center justify-center mobile-btn w-full md:w-auto">
+              <i class="fas fa-play mr-2"></i>立即播放
+            </button>
+            <button
+              class="bg-card-bg hover:bg-slate-700 text-white px-4 py-3 md:px-6 rounded-full font-medium flex items-center justify-center mobile-btn-sm w-full md:w-auto">
+              <i class="fas fa-share-alt mr-2"></i>分享
+            </button>
+          </div>
+
+          <div class="text-secondary flex items-center text-sm md:text-base">
+            <i class="fas fa-sync-alt mr-2"></i>
+            <span>更新: 2025-08-27 06:55</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要内容区域 -->
+  <main class="container mx-auto max-w-6xl px-4 md:px-6 py-8 md:py-10">
+    <!-- 剧情简介 -->
+    <section class="bg-card-bg rounded-2xl p-5 md:p-6 mb-6 md:mb-10 shadow-xl">
+      <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 flex items-center">
+        <i class="fas fa-book-open text-primary mr-3"></i>剧情简介
+      </h2>
+      <p class="mobile-text-lg leading-relaxed text-gray-300">
+        若然未报，时辰未到，报应始终会来。<br><br>
+        五名好友因一时疏忽造成了一起严重车祸，他们决定一起毁尸灭迹掩盖真相。一年后，一个知晓该事件的神秘杀手在暗处伺机夺取他们的生命，而他们发现相似的事件曾在数年前发生过，他们决定向当时的两位幸存者
+        (詹妮弗·洛芙·休伊特、小弗雷迪·普林兹 饰) 求助。
+      </p>
+    </section>
+
+    <!-- 播放源 -->
+    <section class="bg-card-bg rounded-2xl p-5 md:p-6 mb-6 md:mb-10 shadow-xl">
+      <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center">
+        <i class="fas fa-play-circle text-primary mr-3"></i>播放源
+      </h2>
+
+      <!-- 播放源选项卡 -->
+      <div class="mb-4 border-b border-slate-700">
+        <div class="flex flex-wrap -mb-px">
+          <button
+            class="tab-btn active px-3 py-2 md:px-4 font-medium border-b-2 border-primary text-primary transition-colors text-sm md:text-base">
+            wjm3u8
+          </button>
+          <button
+            class="tab-btn px-3 py-2 md:px-4 font-medium border-b-2 border-transparent text-secondary hover:text-white transition-colors text-sm md:text-base">
+            yun
+          </button>
+          <button
+            class="tab-btn px-3 py-2 md:px-4 font-medium border-b-2 border-transparent text-secondary hover:text-white transition-colors text-sm md:text-base">
+            kuyun
+          </button>
+          <button
+            class="tab-btn px-3 py-2 md:px-4 font-medium border-b-2 border-transparent text-secondary hover:text-white transition-colors text-sm md:text-base">
+            ckm3u8
+          </button>
+        </div>
+      </div>
+
+      <!-- 播放源内容 -->
+      <div class="space-y-4">
+        <!-- wjm3u8 内容 -->
+        <div class="tab-content active">
+          <div class="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary scrollbar-track-slate-800">
+            <div class="flex flex-wrap gap-2">
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第一集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第二集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第三集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第四集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第五集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第六集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第七集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第八集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第九集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第十集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第十一集</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">第十二集</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- yun 内容 -->
+        <div class="tab-content hidden">
+          <div class="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary scrollbar-track-slate-800">
+            <div class="flex flex-wrap gap-2">
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">HD 高清</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">蓝光 1080P</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">4K 超清</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- kuyun 内容 -->
+        <div class="tab-content hidden">
+          <div class="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary scrollbar-track-slate-800">
+            <div class="flex flex-wrap gap-2">
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">正片</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">预告片</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">花絮</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- ckm3u8 内容 -->
+        <div class="tab-content hidden">
+          <div class="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary scrollbar-track-slate-800">
+            <div class="flex flex-wrap gap-2">
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">中字</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">英字</a>
+              <a href="#" class="bg-slate-800 rounded px-3 py-2 hover:bg-slate-700 transition-colors">无字幕</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+      <!-- 左侧：详细信息 -->
+      <div class="lg:col-span-1">
+        <div class="bg-card-bg rounded-2xl p-5 md:p-6 shadow-xl mb-6 md:mb-8">
+          <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center">
+            <i class="fas fa-info-circle text-primary mr-3"></i>详细信息
+          </h2>
+          <div class="space-y-3">
+            <div class="info-item flex justify-between">
+              <span class="text-secondary text-sm md:text-base">语言:</span>
+              <span class="font-medium text-sm md:text-base">英语</span>
+            </div>
+            <div class="info-item flex justify-between">
+              <span class="text-secondary text-sm md:text-base">类型:</span>
+              <div class="flex gap-2">
+                <span class="genre-tag bg-slate-700 px-2 py-1 md:px-3 text-xs md:text-sm rounded-full">惊悚</span>
+                <span class="genre-tag bg-slate-700 px-2 py-1 md:px-3 text-xs md:text-sm rounded-full">恐怖</span>
+              </div>
+            </div>
+            <div class="info-item flex justify-between">
+              <span class="text-secondary text-sm md:text-base">状态:</span>
+              <span class="font-medium text-sm md:text-base">HD</span>
+            </div>
+            <div class="info-item flex justify-between">
+              <span class="text-secondary text-sm md:text-base">更新:</span>
+              <span class="font-medium text-sm md:text-base">2025-08-27 06:55</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：相关推荐 -->
+      <div class="lg:col-span-2">
+        <div class="bg-card-bg rounded-2xl p-5 md:p-6 shadow-xl">
+          <h2 class="mobile-text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center">
+            <i class="fas fa-thumbs-up text-primary mr-3"></i>相关推荐
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+            <!-- 推荐1 -->
+            <div class="recommendation-card bg-slate-800 rounded-xl overflow-hidden fade-in">
+              <img
+                src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                alt="请勿喂养" class="w-full aspect-[2/3] object-cover">
+              <div class="p-3 md:p-4">
+                <h3 class="recommendation-title font-bold text-sm md:text-base mb-1">请勿喂养</h3>
+                <div class="flex justify-between text-xs md:text-sm text-secondary">
+                  <span>2025</span>
+                  <span>恐怖</span>
+                </div>
+                <div class="mt-2 md:mt-3 flex justify-between items-center">
+                  <span class="text-xs bg-amber-600 px-2 py-1 rounded">HD</span>
+                  <span class="text-xs md:text-sm">2025-08-27</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 推荐2 -->
+            <div class="recommendation-card bg-slate-800 rounded-xl overflow-hidden fade-in">
+              <img
+                src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                alt="鬼斧逐个捉" class="w-full aspect-[2/3] object-cover">
+              <div class="p-3 md:p-4">
+                <h3 class="recommendation-title font-bold text-sm md:text-base mb-1">鬼斧逐个捉</h3>
+                <div class="flex justify-between text-xs md:text-sm text-secondary">
+                  <span>2022</span>
+                  <span>恐怖</span>
+                </div>
+                <div class="mt-2 md:mt-3 flex justify-between items-center">
+                  <span class="text-xs bg-amber-600 px-2 py-1 rounded">HD</span>
+                  <span class="text-xs md:text-sm">2025-08-26</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 推荐3 -->
+            <div class="recommendation-card bg-slate-800 rounded-xl overflow-hidden fade-in">
+              <img
+                src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                alt="豹族" class="w-full aspect-[2/3] object-cover">
+              <div class="p-3 md:p-4">
+                <h3 class="recommendation-title font-bold text-sm md:text-base mb-1">豹族</h3>
+                <div class="flex justify-between text-xs md:text-sm text-secondary">
+                  <span>1942</span>
+                  <span>恐怖</span>
+                </div>
+                <div class="mt-2 md:mt-3 flex justify-between items-center">
+                  <span class="text-xs bg-amber-600 px-2 py-1 rounded">HD</span>
+                  <span class="text-xs md:text-sm">2025-08-26</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-card-bg py-6 md:py-8 mt-8 md:mt-12">
+    <div class="container mx-auto max-w-6xl px-4 md:px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0 text-center md:text-left">
+          <div class="flex items-center justify-center md:justify-start">
+            <i class="fas fa-film text-primary text-2xl mr-3"></i>
+            <h2 class="text-xl font-bold text-white">电影天堂</h2>
+          </div>
+          <p class="text-secondary mt-2 text-sm md:text-base">海量高清电影，随时随地观看</p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">关于我们</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">联系方式</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">用户协议</a>
+          <a href="#" class="text-secondary hover:text-white transition-colors text-sm md:text-base">隐私政策</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-700 mt-6 md:mt-8 pt-4 md:pt-6 text-center text-secondary text-sm md:text-base">
+        <p>© 2025 电影天堂 版权所有 | 本网站仅供学习交流使用</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 回到顶部按钮 -->
+  <button id="backToTop"
+    class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-rose-500 transition-colors opacity-0 invisible transition-all duration-300">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    // 回到顶部按钮
+    const backToTopBtn = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'invisible');
+        backToTopBtn.classList.add('opacity-100', 'visible');
+      } else {
+        backToTopBtn.classList.remove('opacity-100', 'visible');
+        backToTopBtn.classList.add('opacity-0', 'invisible');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    // 模拟加载动画
+    document.querySelectorAll('.fade-in').forEach((el, index) => {
+      el.style.animationDelay = `${index * 0.1}s`;
+    });
+
+    // 播放源选项卡切换
+    const staticDetailTabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    staticDetailTabBtns.forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        // 移除所有按钮和内容的active类
+        staticDetailTabBtns.forEach(btn => {
+          btn.classList.remove('active', 'border-primary', 'text-primary');
+          btn.classList.add('border-transparent', 'text-secondary');
+        });
+        tabContents.forEach(content => content.classList.add('hidden'));
+
+        // 添加active类到当前按钮和内容
+        btn.classList.add('active', 'border-primary', 'text-primary');
+        btn.classList.remove('border-transparent', 'text-secondary');
+        tabContents[index].classList.remove('hidden');
+      });
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}用户协议 - {{ SITENAME }}{% endblock %}
+
+{% block description %}{{ SITENAME }}用户协议，了解使用条款和条件，用户权利和义务，服务规范{% endblock %}
+
+{% block keywords %}用户协议,{{ SITENAME }},服务条款,用户权利,使用规范,法律条款{% endblock %}
+
+{% block content %}
+<!-- 主要内容区域 -->
+<main class="container mx-auto max-w-4xl px-4 md:px-6 py-8 md:py-12">
+  <!-- 页面标题 -->
+  <section class="hero-bg rounded-xl p-8 md:p-12 mb-8 md:mb-12">
+    <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">用户协议</h1>
+    <p class="text-gray-300 text-lg md:text-xl">请仔细阅读以下条款和条件</p>
+  </section>
+
+  <!-- 协议内容 -->
+  <div class="grid md:grid-cols-4 gap-8">
+    <!-- 目录 -->
+    <div class="md:col-span-1">
+      <div class="bg-card-bg rounded-xl p-4 sticky top-4">
+        <h3 class="text-lg font-semibold text-white mb-4">目录</h3>
+        <nav class="space-y-2">
+          <a href="#section1" class="toc-item block text-gray-300 hover:text-white text-sm py-1">1. 接受条款</a>
+          <a href="#section2" class="toc-item block text-gray-300 hover:text-white text-sm py-1">2. 服务描述</a>
+          <a href="#section3" class="toc-item block text-gray-300 hover:text-white text-sm py-1">3. 用户注册</a>
+          <a href="#section4" class="toc-item block text-gray-300 hover:text-white text-sm py-1">4. 用户行为规范</a>
+          <a href="#section5" class="toc-item block text-gray-300 hover:text-white text-sm py-1">5. 知识产权</a>
+          <a href="#section6" class="toc-item block text-gray-300 hover:text-white text-sm py-1">6. 隐私保护</a>
+          <a href="#section7" class="toc-item block text-gray-300 hover:text-white text-sm py-1">7. 免责声明</a>
+          <a href="#section8" class="toc-item block text-gray-300 hover:text-white text-sm py-1">8. 协议修改</a>
+          <a href="#section9" class="toc-item block text-gray-300 hover:text-white text-sm py-1">9. 其他条款</a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- 详细内容 -->
+    <div class="md:col-span-3 space-y-6">
+      <section id="section1" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">1. 接受条款</h2>
+        <p class="text-gray-300 mb-3">
+          欢迎使用{{ SITENAME }}（以下简称"本网站"）。通过访问或使用本网站的服务，您同意遵守本用户协议的所有条款和条件。
+        </p>
+        <p class="text-gray-300">
+          如果您不同意本协议的任何部分，请不要使用本网站的服务。本协议构成您与{{ SITENAME }}之间的法律协议。
+        </p>
+      </section>
+
+      <section id="section2" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">2. 服务描述</h2>
+        <p class="text-gray-300 mb-3">
+          {{ SITENAME }}是一个在线影视内容平台，为用户提供电影、电视剧、动画、综艺等多种类型的影视内容观看服务。
+        </p>
+        <p class="text-gray-300 mb-3">
+          我们的服务包括但不限于：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1">
+          <li>在线视频播放</li>
+          <li>影视内容搜索</li>
+          <li>用户评论和评分</li>
+          <li>个性化推荐</li>
+          <li>VIP会员服务</li>
+        </ul>
+      </section>
+
+      <section id="section3" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">3. 用户注册</h2>
+        <p class="text-gray-300 mb-3">
+          使用本网站的某些服务需要注册账户。注册时，您需要提供真实、准确、完整的个人信息。
+        </p>
+        <p class="text-gray-300 mb-3">
+          用户有责任保护自己的账户安全，不得将账户信息泄露给他人。因账户信息泄露造成的损失由用户自行承担。
+        </p>
+        <p class="text-gray-300">
+          如发现账户被盗用，请立即联系我们处理。
+        </p>
+      </section>
+
+      <section id="section4" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">4. 用户行为规范</h2>
+        <p class="text-gray-300 mb-3">
+          用户在使用本网站服务时，必须遵守相关法律法规和道德规范，不得从事以下行为：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1 mb-3">
+          <li>发布、传播违法、违规、低俗、暴力等内容</li>
+          <li>侵犯他人知识产权或隐私权</li>
+          <li>利用本网站进行商业活动或广告宣传</li>
+          <li>恶意攻击、破坏网站系统</li>
+          <li>干扰其他用户的正常使用</li>
+        </ul>
+        <p class="text-gray-300">
+          违反上述规定的用户，我们有权暂停或终止其账户使用权限。
+        </p>
+      </section>
+
+      <section id="section5" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">5. 知识产权</h2>
+        <p class="text-gray-300 mb-3">
+          本网站的所有内容，包括但不限于文字、图片、视频、音频、软件等，均受知识产权法保护。
+        </p>
+        <p class="text-gray-300 mb-3">
+          未经本网站书面许可，用户不得复制、传播、修改、销售或以其他方式使用本网站的任何内容。
+        </p>
+        <p class="text-gray-300">
+          用户在本网站发布的原创内容，其知识产权归用户所有，但用户授予本网站非独家的、全球性的使用许可。
+        </p>
+      </section>
+
+      <section id="section6" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">6. 隐私保护</h2>
+        <p class="text-gray-300 mb-3">
+          我们重视用户隐私保护，将按照《隐私政策》的规定收集、使用和保护用户信息。
+        </p>
+        <p class="text-gray-300">
+          我们不会向第三方出售或泄露用户的个人信息，除非获得用户明确同意或法律法规要求。
+        </p>
+      </section>
+
+      <section id="section7" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">7. 免责声明</h2>
+        <p class="text-gray-300 mb-3">
+          本网站提供的服务按"现状"提供，不提供任何明示或暗示的保证，包括但不限于适销性、特定用途适用性和非侵权性的保证。
+        </p>
+        <p class="text-gray-300 mb-3">
+          本网站不对以下情况承担责任：
+        </p>
+        <ul class="text-gray-400 list-disc list-inside space-y-1 mb-3">
+          <li>因不可抗力导致的服务中断</li>
+          <li>用户自身原因造成的损失</li>
+          <li>第三方提供的内容或服务</li>
+          <li>网络连接问题导致的使用困难</li>
+        </ul>
+        <p class="text-gray-300">
+          在任何情况下，本网站的责任均不超过用户为使用服务而支付的费用。
+        </p>
+      </section>
+
+      <section id="section8" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">8. 协议修改</h2>
+        <p class="text-gray-300 mb-3">
+          本网站保留随时修改本协议的权利。修改后的协议将在网站上公布，并自公布之日起生效。
+        </p>
+        <p class="text-gray-300">
+          继续使用本网站服务即表示您接受修改后的协议。如果您不同意修改，请停止使用本网站的服务。
+        </p>
+      </section>
+
+      <section id="section9" class="bg-card-bg rounded-xl p-6">
+        <h2 class="text-xl font-bold text-white mb-4">9. 其他条款</h2>
+        <p class="text-gray-300 mb-3">
+          本协议受中华人民共和国法律管辖。如发生争议，双方应友好协商解决；协商不成的，应向本网站所在地有管辖权的法院提起诉讼。
+        </p>
+        <p class="text-gray-300 mb-3">
+          如本协议的任何条款被认定为无效或不可执行，不影响其他条款的效力。
+        </p>
+        <p class="text-gray-300">
+          本协议最后更新时间：2025年8月27日
+        </p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<style>
+  .toc-item {
+    transition: all 0.3s ease;
+  }
+
+  .toc-item:hover {
+    background-color: rgba(244, 63, 94, 0.1);
+    padding-left: 1rem;
+  }
+
+  .hero-bg {
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+      url('https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center 25%;
+    position: relative;
+  }
+</style>
+
+<script>
+  // 平滑滚动到锚点
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+</script>
+{% endblock %}

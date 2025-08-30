@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ SITENAME | default(value='影视天堂') }}{% endblock %}</title>
+  <meta name="description"
+    content="{% block description %}{{ site_description | default(value='海量高清影视内容，随时随地观看') }}{% endblock %}">
+  <meta name="keywords"
+    content="{% block keywords %}{{ site_keywords | default(value='影视,电影,电视剧,动画,综艺,在线观看') }}{% endblock %}">
+
+  <!-- CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-bg': '#0f172a',
+            'card-bg': '#1e293b',
+            'primary': '#f43f5e',
+            'secondary': '#94a3b8'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* 导航栏样式 */
+    .navbar {
+      background-color: #1e293b;
+      padding: 0.75rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (min-width: 768px) {
+      .navbar {
+        padding: 1rem 1.5rem;
+      }
+    }
+
+    /* Logo区域 */
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+    }
+
+    .navbar-brand a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .navbar-logo {
+      color: #f43f5e;
+      font-size: 1.25rem;
+      margin-right: 0.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .navbar-logo {
+        font-size: 1.5rem;
+        margin-right: 0.75rem;
+      }
+    }
+
+    .navbar-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    @media (min-width: 768px) {
+      .navbar-title {
+        font-size: 1.25rem;
+      }
+    }
+
+    /* PC端导航链接 */
+    .navbar-nav {
+      display: none;
+      align-items: center;
+      margin-left: 1.5rem;
+      gap: 1rem;
+    }
+
+    @media (min-width: 768px) {
+      .navbar-nav {
+        display: flex;
+      }
+    }
+
+    .navbar-nav a {
+      background-color: #475569;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+
+    .navbar-nav a:hover {
+      background-color: #64748b;
+    }
+
+    .navbar-nav a.active {
+      background-color: #f43f5e;
+      color: white;
+    }
+
+    .navbar-nav a.active:hover {
+      background-color: #e11d48;
+    }
+
+    /* 右侧操作区域 */
+    .navbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .navbar-actions {
+        gap: 1rem;
+      }
+    }
+
+    /* 搜索按钮 */
+    .navbar-search {
+      display: none;
+      align-items: center;
+      color: #f43f5e;
+      text-decoration: none;
+    }
+
+    @media (min-width: 768px) {
+      .navbar-search {
+        display: flex;
+      }
+    }
+
+    .navbar-search i {
+      margin-right: 0.25rem;
+    }
+
+    /* 播放记录下拉菜单 */
+    .dropdown {
+      position: relative;
+      display: none;
+    }
+
+    @media (min-width: 768px) {
+      .dropdown {
+        display: block;
+      }
+    }
+
+    .dropdown-toggle {
+      background-color: #475569;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: background-color 0.3s ease;
+    }
+
+    .dropdown-toggle:hover {
+      background-color: #64748b;
+    }
+
+    .dropdown-toggle i:first-child {
+      margin-right: 0.5rem;
+    }
+
+    .dropdown-toggle i:last-child {
+      margin-left: 0.25rem;
+      font-size: 0.75rem;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 0.5rem;
+      width: 16rem;
+      background-color: #1e293b;
+      border-radius: 0.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      z-index: 50;
+      padding: 0.5rem 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+    }
+
+    .dropdown-menu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .dropdown-header {
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #475569;
+    }
+
+    .dropdown-header h3 {
+      font-weight: 700;
+      margin: 0;
+      color: white;
+    }
+
+    .dropdown-content {
+      max-height: 20rem;
+      overflow-y: auto;
+    }
+
+    .dropdown-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      color: white;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+
+    .dropdown-item:hover {
+      background-color: #475569;
+    }
+
+    .dropdown-item-content {
+      display: flex;
+    }
+
+    .dropdown-item-thumb {
+      width: 4rem;
+      height: 2.5rem;
+      background-color: #64748b;
+      border-radius: 0.25rem;
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .dropdown-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dropdown-item-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin: 0 0 0.25rem 0;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 1;
+    }
+
+    .dropdown-item-progress {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin: 0;
+    }
+
+    .dropdown-footer {
+      padding: 0.5rem 1rem;
+      border-top: 1px solid #475569;
+    }
+
+    .dropdown-footer a {
+      color: #f43f5e;
+      font-size: 0.875rem;
+      text-decoration: none;
+    }
+
+    .dropdown-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* 移动端菜单按钮 */
+    .mobile-menu-btn {
+      display: block;
+      background: none;
+      border: none;
+      color: white;
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    @media (min-width: 768px) {
+      .mobile-menu-btn {
+        display: none;
+      }
+    }
+
+    .mobile-menu-btn i {
+      font-size: 1.25rem;
+    }
+
+    /* 移动端导航菜单 */
+    .mobile-nav {
+      display: block;
+      transform: translateY(-10px);
+      opacity: 0;
+      visibility: hidden;
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      background: #1e293b;
+      transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+      z-index: 40;
+      max-height: 0;
+      overflow: hidden;
+    }
+
+    @media (min-width: 768px) {
+      .mobile-nav {
+        display: none;
+      }
+    }
+
+    .mobile-nav.show {
+      transform: translateY(0);
+      opacity: 1;
+      visibility: visible;
+      max-height: 500px;
+    }
+
+    .mobile-nav-content {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .mobile-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .mobile-nav-links a {
+      background-color: #475569;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+
+    .mobile-nav-links a:hover {
+      background-color: #64748b;
+    }
+
+    .mobile-nav-links a.active {
+      background-color: #f43f5e;
+      color: white;
+    }
+
+    .mobile-nav-links a.active:hover {
+      background-color: #e11d48;
+    }
+
+    /* 移动端搜索框 */
+    .mobile-search {
+      position: relative;
+    }
+
+    .mobile-search input {
+      width: 100%;
+      background-color: #475569;
+      color: white;
+      padding: 0.5rem 1rem;
+      padding-right: 2.5rem;
+      border-radius: 9999px;
+      border: none;
+      outline: none;
+    }
+
+    .mobile-search input:focus {
+      ring: 2px solid #f43f5e;
+    }
+
+    .mobile-search button {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+
+    .mobile-search button:hover {
+      color: #f43f5e;
+    }
+
+    /* 移动端播放记录 */
+    .mobile-history {
+      color: white;
+    }
+
+    .mobile-history h3 {
+      font-weight: 500;
+      margin: 0 0 0.5rem 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .mobile-history h3 i {
+      margin-right: 0.5rem;
+    }
+
+    .mobile-history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .mobile-history-item {
+      display: block;
+      padding: 0.5rem;
+      background-color: #475569;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+
+    .mobile-history-item:hover {
+      background-color: #64748b;
+    }
+
+    .mobile-history-item-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin: 0 0 0.25rem 0;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 1;
+    }
+
+    .mobile-history-item-progress {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin: 0;
+    }
+
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+      .mobile-padding {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .mobile-text-lg {
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+      }
+
+      .mobile-text-xl {
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+    }
+
+    /* 工具类 */
+    .line-clamp-1 {
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 1;
+    }
+
+    .line-clamp-2 {
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+      {
+      % block extra_css %
+    }
+
+      {
+      % endblock %
+    }
+
+    /* Detail 页面样式 */
+    .movie-header {
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%),
+        url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center 25%;
+      position: relative;
+    }
+
+    .poster-container {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      transition: transform 0.3s ease;
+    }
+
+    .poster-container:hover {
+      transform: translateY(-5px);
+    }
+
+    .poster-container::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40%;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      pointer-events: none;
+    }
+
+    .type-tag {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(244, 63, 94, 0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+      z-index: 10;
+      transition: all 0.3s ease;
+    }
+
+    .hd-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      transition: all 0.3s ease;
+    }
+
+    .year-badge {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+
+    .region-badge {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(30, 41, 59, 0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+
+    .cast-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: #f43f5e #1e293b;
+    }
+
+    .cast-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .cast-scroll::-webkit-scrollbar-track {
+      background: #1e293b;
+      border-radius: 10px;
+    }
+
+    .cast-scroll::-webkit-scrollbar-thumb {
+      background: #f43f5e;
+      border-radius: 10px;
+    }
+
+    .play-btn {
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.3);
+    }
+
+    .play-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.4);
+    }
+
+    .mobile-text-lg {
+      font-size: 1.125rem;
+      line-height: 1.75rem;
+    }
+
+    .mobile-text-xl {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+
+    .mobile-text-2xl {
+      font-size: 1.5rem;
+      line-height: 2rem;
+    }
+
+    .mobile-btn {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      min-height: 3rem;
+    }
+
+    .mobile-btn-sm {
+      padding: 0.6rem 1.2rem;
+      font-size: 0.9rem;
+      min-height: 2.6rem;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-padding {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .mobile-mb-4 {
+        margin-bottom: 1rem;
+      }
+
+      .mobile-mb-6 {
+        margin-bottom: 1.5rem;
+      }
+
+      .mobile-py-6 {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+      }
+
+      .mobile-gap-3 {
+        gap: 0.75rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-dark-bg">
+  <!-- 引入通用导航栏 -->
+  {% include 'partials/nav.html' %}
+
+  <!-- 主要内容区域 -->
+  {% block content %}{% endblock %}
+
+  <!-- 页脚 -->
+  <footer class="bg-card-bg py-6 md:py-8 mt-8 md:mt-12">
+    <div class="container mx-auto max-w-6xl px-4 md:px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0 text-center md:text-left">
+          <div class="flex items-center justify-center md:justify-start">
+            <i class="fas fa-film text-primary text-2xl mr-3"></i>
+            <h2 class="text-xl font-bold text-white">{{ SITENAME | default(value='影视天堂') }}</h2>
+          </div>
+          <p class="text-secondary mt-2 text-sm md:text-base">{{ site_description | default(value='海量高清影视内容，随时随地观看') }}
+          </p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+          <a href="/about" class="text-secondary hover:text-white transition-colors text-sm md:text-base">关于我们</a>
+          <a href="/contact" class="text-secondary hover:text-white transition-colors text-sm md:text-base">联系方式</a>
+          <a href="/terms" class="text-secondary hover:text-white transition-colors text-sm md:text-base">用户协议</a>
+          <a href="/privacy" class="text-secondary hover:text-white transition-colors text-sm md:text-base">隐私政策</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-700 mt-6 md:mt-8 pt-4 md:pt-6 text-center text-secondary text-sm md:text-base">
+        <p>© {{ current_year | default(value='2025') }} {{ SITENAME | default(value='影视天堂') }} 版权所有 | 本网站仅供学习交流使用</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 回到顶部按钮 -->
+  <button id="backToTop"
+    class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-rose-500 transition-colors opacity-0 invisible transition-all duration-300">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    // 回到顶部按钮
+    const backToTopBtn = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'invisible');
+        backToTopBtn.classList.add('opacity-100', 'visible');
+      } else {
+        backToTopBtn.classList.remove('opacity-100', 'visible');
+        backToTopBtn.classList.add('opacity-0', 'invisible');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    // 清除播放记录
+    function clearHistory() {
+      if (confirm('确定要清除所有播放记录吗？')) {
+        // 这里可以添加清除记录的AJAX请求
+        fetch('/api/clear-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }).then(response => {
+          if (response.ok) {
+            location.reload();
+          }
+        }).catch(error => {
+          console.error('清除记录失败:', error);
+        });
+      }
+    }
+    // 通用导航栏JavaScript
+
+    // 移动端菜单初始化
+    function initMobileMenu() {
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const mobileNav = document.getElementById('mobileNav');
+
+      if (!mobileMenuBtn || !mobileNav) return;
+
+      // 移动端菜单按钮点击事件
+      mobileMenuBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        mobileNav.classList.toggle('show');
+      });
+
+      // 点击页面其他区域关闭移动端菜单
+      document.addEventListener('click', function (e) {
+        if (!mobileNav.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+          mobileNav.classList.remove('show');
+        }
+      });
+
+      // 鼠标进入菜单区域时取消关闭
+      mobileNav.addEventListener('mouseenter', function () {
+        // 保持菜单打开状态
+      });
+
+      mobileNav.addEventListener('touchstart', function () {
+        // 保持菜单打开状态
+      });
+    }
+
+    // 播放记录下拉菜单初始化
+    function initDropdownMenu() {
+      const dropdown = document.querySelector('.dropdown');
+      const dropdownToggle = document.querySelector('.dropdown-toggle');
+      const dropdownMenu = document.querySelector('.dropdown-menu');
+      let isDropdownOpen = false;
+
+      if (!dropdown || !dropdownToggle || !dropdownMenu) return;
+
+      // 点击按钮切换菜单显示
+      dropdownToggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        isDropdownOpen = !isDropdownOpen;
+
+        if (isDropdownOpen) {
+          dropdownMenu.classList.add('show');
+        } else {
+          dropdownMenu.classList.remove('show');
+        }
+      });
+
+      // 点击页面其他区域关闭下拉菜单
+      document.addEventListener('click', function (e) {
+        if (!dropdown.contains(e.target)) {
+          isDropdownOpen = false;
+          dropdownMenu.classList.remove('show');
+        }
+      });
+
+      // 阻止菜单内部点击事件冒泡
+      dropdownMenu.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+    }
+
+    // 搜索功能（可选）
+    function initSearch() {
+      const searchInputs = document.querySelectorAll('.mobile-search input, .search-input');
+
+      searchInputs.forEach(input => {
+        input.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            const query = this.value.trim();
+            if (query) {
+              // 这里可以添加搜索逻辑
+              console.log('搜索:', query);
+              // 例如：window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+            }
+          }
+        });
+      });
+
+      const searchButtons = document.querySelectorAll('.mobile-search button, .search-button');
+
+      searchButtons.forEach(button => {
+        button.addEventListener('click', function () {
+          const input = this.parentElement.querySelector('input');
+          if (input) {
+            const query = input.value.trim();
+            if (query) {
+              // 这里可以添加搜索逻辑
+              console.log('搜索:', query);
+              // 例如：window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+            }
+          }
+        });
+      });
+    }
+
+    // 播放记录管理（可选）
+    function addToHistory(videoData) {
+      if (playHistory && videoData) {
+        playHistory.addRecord(
+          videoData.id,
+          videoData.name,
+          videoData.episode,
+          videoData.url,
+          videoData.poster,
+          videoData.currentTime || 0
+        );
+        console.log('已添加到播放记录:', videoData);
+      }
+    }
+
+    function getHistory() {
+      return playHistory ? playHistory.getHistory() : [];
+    }
+
+    function clearHistory() {
+      if (playHistory) {
+        playHistory.clearHistory();
+        playHistory.renderMobileHistory(); // 确保移动端也刷新显示
+        console.log('播放记录已清除');
+      }
+    }
+
+    // PlayHistory 类 - 播放记录管理
+    class PlayHistory {
+      constructor() {
+        this.storageKey = 'video_play_history';
+        this.maxItems = 20; // 最多保存20条记录
+        this.history = this.loadHistory();
+      }
+
+      // 添加播放记录
+      addRecord(videoId, videoName, episodeName, playUrl, poster, currentTime = 0) {
+        const record = {
+          id: videoId,
+          name: videoName,
+          episode: episodeName || '第1集',
+          url: playUrl,
+          poster: poster || '',
+          currentTime: currentTime,
+          watchTime: this.formatTime(currentTime),
+          timestamp: Date.now(),
+          lastWatched: new Date().toLocaleString('zh-CN')
+        };
+
+        // 移除已存在的相同视频记录
+        this.history = this.history.filter(item =>
+          !(item.id === videoId && item.episode === episodeName)
+        );
+
+        // 添加到开头
+        this.history.unshift(record);
+
+        // 限制数量
+        if (this.history.length > this.maxItems) {
+          this.history = this.history.slice(0, this.maxItems);
+        }
+
+        this.saveHistory();
+        this.renderHistory();
+      }
+
+      // 加载播放记录
+      loadHistory() {
+        try {
+          const data = localStorage.getItem(this.storageKey);
+          return data ? JSON.parse(data) : [];
+        } catch (error) {
+          console.error('加载播放记录失败:', error);
+          return [];
+        }
+      }
+
+      // 保存播放记录
+      saveHistory() {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.history));
+        } catch (error) {
+          console.error('保存播放记录失败:', error);
+        }
+      }
+
+      // 清空播放记录
+      clearHistory() {
+        this.history = [];
+        this.saveHistory();
+        this.renderHistory();
+      }
+
+      // 格式化时间
+      formatTime(seconds) {
+        if (!seconds || seconds < 0) return '刚开始';
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+
+        if (hours > 0) {
+          return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else {
+          return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+      }
+
+      // 渲染播放记录到下拉菜单
+      renderHistory() {
+        const historyContainer = document.querySelector('.dropdown-content');
+        if (!historyContainer) return;
+
+        if (this.history.length === 0) {
+          historyContainer.innerHTML = `
+            <div class="dropdown-item">
+              <div class="dropdown-item-content">
+                <p class="text-gray-400 text-center py-4">暂无播放记录</p>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        const historyHTML = this.history.slice(0, 5).map(record => `
+          <a href="${record.url}" class="dropdown-item">
+            <div class="dropdown-item-content">
+              <div class="dropdown-item-thumb" style="background-image: url('${record.poster}'); background-size: cover; background-position: center;"></div>
+              <div class="dropdown-item-info">
+                <p class="dropdown-item-title">${record.name}</p>
+                <p class="dropdown-item-progress">${record.episode} - ${record.watchTime}</p>
+              </div>
+            </div>
+          </a>
+        `).join('');
+
+        historyContainer.innerHTML = historyHTML;
+      }
+
+      // 渲染移动端播放记录
+      renderMobileHistory() {
+        const mobileHistoryContainer = document.querySelector('.mobile-history-list');
+        if (!mobileHistoryContainer) return;
+
+        if (this.history.length === 0) {
+          mobileHistoryContainer.innerHTML = `
+            <div class="mobile-history-item">
+              <p class="text-gray-400 text-center py-4">暂无播放记录</p>
+            </div>
+          `;
+          return;
+        }
+
+        const historyHTML = this.history.slice(0, 3).map(record => `
+          <a href="${record.url}" class="mobile-history-item">
+            <p class="mobile-history-item-title">${record.name}</p>
+            <p class="mobile-history-item-progress">${record.episode} - ${record.watchTime}</p>
+          </a>
+        `).join('');
+
+        mobileHistoryContainer.innerHTML = historyHTML;
+      }
+
+      // 获取播放记录
+      getHistory() {
+        return this.history;
+      }
+    }
+
+    // 全局播放记录实例
+    let playHistory = null;
+
+    // 页面加载完成后初始化所有功能
+    document.addEventListener('DOMContentLoaded', function () {
+      initMobileMenu();
+      initDropdownMenu();
+      initSearch();
+
+      // 初始化播放记录
+      playHistory = new PlayHistory();
+      playHistory.renderHistory();
+      playHistory.renderMobileHistory();
+    });
+
+    // 导出函数供其他脚本使用
+    if (typeof module !== 'undefined' && module.exports) {
+      module.exports = {
+        initMobileMenu,
+        initDropdownMenu,
+        initSearch,
+        addToHistory,
+        getHistory,
+        clearHistory
+      };
+    }
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+
+</html>

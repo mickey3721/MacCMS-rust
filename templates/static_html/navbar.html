@@ -1,0 +1,112 @@
+<!-- 通用导航栏HTML结构 -->
+<!-- 顶部导航 -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <a href="index.html">
+      <i class="fas fa-film navbar-logo"></i>
+    </a>
+    <a href="index.html" class="navbar-title">影视天堂</a>
+
+    <!-- PC端导航 -->
+    <div class="navbar-nav">
+      <a href="#">电影</a>
+      <a href="#">电视剧</a>
+      <a href="#">动画</a>
+      <a href="#">综艺</a>
+    </div>
+  </div>
+
+  <div class="navbar-actions">
+    <!-- 搜索按钮 - PC端 -->
+    <a href="search.html" class="navbar-search">
+      <i class="fas fa-search"></i>
+    </a>
+
+    <!-- 播放记录下拉 - PC端 -->
+    <div class="dropdown">
+      <button class="dropdown-toggle">
+        <i class="fas fa-history"></i> 播放记录
+        <i class="fas fa-chevron-down"></i>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-header">
+          <h3>最近观看</h3>
+        </div>
+        <div class="dropdown-content">
+          <a href="#" class="dropdown-item">
+            <div class="dropdown-item-content">
+              <div class="dropdown-item-thumb"></div>
+              <div class="dropdown-item-info">
+                <p class="dropdown-item-title">我知道你去年夏天干了什么</p>
+                <p class="dropdown-item-progress">10分钟前</p>
+              </div>
+            </div>
+          </a>
+          <a href="#" class="dropdown-item">
+            <div class="dropdown-item-content">
+              <div class="dropdown-item-thumb"></div>
+              <div class="dropdown-item-info">
+                <p class="dropdown-item-title">星际穿越：重生</p>
+                <p class="dropdown-item-progress">1个小时前</p>
+              </div>
+            </div>
+          </a>
+          <a href="#" class="dropdown-item">
+            <div class="dropdown-item-content">
+              <div class="dropdown-item-thumb"></div>
+              <div class="dropdown-item-info">
+                <p class="dropdown-item-title">复仇者联盟：终局之战</p>
+                <p class="dropdown-item-progress">2个小时前</p>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="dropdown-footer">
+          <a href="#">清除全部记录</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 移动端菜单按钮 -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- 移动端导航菜单 -->
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-content">
+    <div class="mobile-nav-links">
+      <a href="#">电影</a>
+      <a href="#">电视剧</a>
+      <a href="#">动画</a>
+      <a href="#">综艺</a>
+    </div>
+
+    <!-- 搜索框 - 移动端 -->
+    <div class="mobile-search">
+      <input type="text" placeholder="搜索...">
+      <button>
+        <i class="fas fa-search"></i>
+      </button>
+    </div>
+
+    <!-- 播放记录 - 移动端 -->
+    <div class="mobile-history">
+      <h3>
+        <i class="fas fa-history"></i> 播放记录
+      </h3>
+      <div class="mobile-history-list">
+        <a href="#" class="mobile-history-item">
+          <p class="mobile-history-item-title">我知道你去年夏天干了什么</p>
+          <p class="mobile-history-item-progress">15分钟前</p>
+        </a>
+        <a href="#" class="mobile-history-item">
+          <p class="mobile-history-item-title">星际穿越：重生</p>
+          <p class="mobile-history-item-progress">2个小时前</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

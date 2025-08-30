@@ -6,9 +6,12 @@ mkdir -p /var/log/mongodb /var/log/maccms
 # 创建 MongoDB 数据目录
 mkdir -p /var/lib/mongodb
 
-# 生成随机密码和配置
-RANDOM_PASSWORD=$(openssl rand -base64 12)
+# 生成随机key
 SESSION_KEY=$(openssl rand -hex 32)
+
+# 设置默认值，如果环境变量未设置则使用默认值
+ADMIN_USER="${ADMIN_USER:-admin}"
+ADMIN_PASS="${ADMIN_PASS:-password123}"
 
 # 创建 .env 文件
 cat > /app/.env << EOF
@@ -16,18 +19,10 @@ DATABASE_URL=mongodb://localhost:27017
 DATABASE_NAME=maccms_rust
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8080
-ADMIN_USER=admin
-ADMIN_PASS=${RANDOM_PASSWORD}
+ADMIN_USER=${ADMIN_USER}
+ADMIN_PASS=${ADMIN_PASS}
 SESSION_SECRET_KEY=${SESSION_KEY}
 RUST_LOG=info
-EOF
-
-# 创建静态目录和凭证文件
-mkdir -p /app/static
-cat > /app/static/admin_credentials.txt << EOF
-Admin Username: admin
-Admin Password: ${RANDOM_PASSWORD}
-Generated at: $(date)
 EOF
 
 # 复制 Supervisor 配置

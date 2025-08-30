@@ -1,13 +1,14 @@
 # MacCMS Rust Edition
 
+![MacCMS Rust Edition](./static/lighthouse.png)
+
+## 视频截图
+
+[![项目演示视频](screenshot.png)](https://raw.githubusercontent.com/TFTG-CLOUD/MacCMS-rust/refs/heads/main/screenshot.mp4)
+
 ## 🚀 项目简介
 
 MacCMS Rust Edition 是基于 Rust 语言重构的高性能视频内容管理系统（CMS），完全兼容原版 MacCMS 的数据结构和 API 接口，但在性能、并发处理和内存管理方面有质的提升。每满百星我就会制作一个好看的模板，欢迎 star 收藏。
-
-### 注意事项
-
-- 由于本项目对安全极其重视，所以无法通过 IP:8080 公网访问，必须反代之后且 ssl 之后通过域名访问。
-- 推荐使用 Release 包安装，且创建服务用户指定安装目录的读写权限方式来使用 systemctl，这样可以最大限度保证安全。
 
 ### ✨ 核心优势
 
@@ -521,33 +522,41 @@ systemctl enable caddy
 
 这是最简单的部署方式，集成了 MongoDB 8 和自动配置，适合快速部署和测试。
 
-#### 1. 构建镜像
-
 ```bash
+#安装docker
 curl -sSL https://get.docker.com/ | sh
 systemctl start docker
 systemctl enable docker
 
-# 克隆项目
-git clone https://github.com/TFTG-CLOUD/maccms-rust
-cd maccms-rust
+# 创建项目文件夹
+mkdir -p /home/maccms-rust
+
+#进入文件夹，下载Dockerfile
+cd /home/maccms-rust
+wget https://raw.githubusercontent.com/TFTG-CLOUD/MacCMS-rust/refs/heads/main/Dockerfile
+wget https://raw.githubusercontent.com/TFTG-CLOUD/MacCMS-rust/refs/heads/main/entrypoint.sh
 
 # 构建 Docker 镜像
 docker build -t maccms-rust:latest .
-```
 
-#### 2. 运行容器
-
-```bash
-# 运行容器（推荐）
+#启动镜像
 docker run -d \
   --name maccms-rust \
   -p 8080:8080 \
+  -e ADMIN_USER=myuser \
+  -e ADMIN_PASS=mypassword \
   -v ./maccms_data:/var/lib/mongodb \
   -v ./maccms_static:/app/static \
   -v ./maccms_logo:/var/log \
   --restart unless-stopped \
   maccms-rust:latest
+
+#相关参数和文件夹说明
+ADMIN_USER 设置后台用户名
+ADMIN_PASS 设置后台密码，推荐复杂点
+/var/lib/mongodb 数据库文件夹，可自行备份
+/app/static 模板文件夹
+/var/log 相关运行日志
 
 # 查看容器状态
 docker ps
@@ -555,19 +564,6 @@ docker ps
 # 查看日志
 docker logs maccms-rust
 
-# 获取管理员密码（首次运行时生成）
-docker logs maccms-rust | grep ADMIN_PASSWORD
-```
-
-#### 3. 访问系统
-
-- **前台页面**: http://localhost:8080
-- **管理后台**: http://localhost:8080/admin
-- **API 接口**: http://localhost:8080/api
-
-#### 4. 容器管理
-
-```bash
 # 停止容器
 docker stop maccms-rust
 
@@ -582,161 +578,6 @@ docker rm maccms-rust
 
 # 进入容器
 docker exec -it maccms-rust /bin/bash
-
-# 查看容器健康状态
-docker inspect maccms-rust | grep Health
-```
-
-#### 5. 数据持久化
-
-容器使用 Docker 卷进行数据持久化：
-
-- **`maccms_data`**: MongoDB 数据库文件
-- **`maccms_static`**: 静态文件和上传的图片
-
-```bash
-# 查看所有卷
-docker volume ls
-
-# 备份数据
-docker run --rm -v maccms_data:/data -v $(pwd):/backup alpine tar czf /backup/maccms_data_backup.tar.gz -C /data .
-
-# 恢复数据
-docker run --rm -v maccms_data:/data -v $(pwd):/backup alpine tar xzf /backup/maccms_data_backup.tar.gz -C /data
-```
-
-#### 6. 生产环境部署
-
-```bash
-# 使用 docker-compose 进行生产部署
-version: '3.8'
-services:
-  maccms-rust:
-    build: .
-    container_name: maccms-rust
-    ports:
-      - "8080:8080"
-    volumes:
-      - maccms_data:/var/lib/mongodb
-      - maccms_static:/app/static
-    restart: unless-stopped
-    environment:
-      - RUST_LOG=info
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-volumes:
-  maccms_data:
-    driver: local
-  maccms_static:
-    driver: local
-```
-
-```bash
-# 启动服务
-docker-compose up -d
-
-# 查看服务状态
-docker-compose ps
-
-# 查看日志
-docker-compose logs -f
-```
-
-#### 7. 自定义配置
-
-如需自定义配置，可以通过环境变量覆盖：
-
-```bash
-docker run -d \
-  --name maccms-rust \
-  -p 8080:8080 \
-  -v maccms_data:/var/lib/mongodb \
-  -v maccms_static:/app/static \
-  -e SERVER_HOST=0.0.0.0 \
-  -e SERVER_PORT=8080 \
-  -e ADMIN_USER=admin \
-  -e ADMIN_PASS=your_custom_password \
-  -e RUST_LOG=debug \
-  --restart unless-stopped \
-  maccms-rust:latest
-```
-
-#### 8. 更新镜像
-
-```bash
-# 构建新版本镜像
-docker build -t maccms-rust:v2.0 .
-
-# 停止并删除旧容器
-docker stop maccms-rust
-docker rm maccms-rust
-
-# 运行新版本容器
-docker run -d \
-  --name maccms-rust \
-  -p 8080:8080 \
-  -v maccms_data:/var/lib/mongodb \
-  -v maccms_static:/app/static \
-  --restart unless-stopped \
-  maccms-rust:v2.0
-```
-
-#### 9. 配置反向代理
-
-参照 Release 包安装中的第 7 步骤。
-
-**优势**:
-
-- 一键部署，无需手动安装 MongoDB
-- 自动配置和初始化
-- 随机生成安全密码
-- 数据持久化
-- 健康检查和自动重启
-- 适合开发和生产环境
-
-### Systemd 服务
-
-```ini
-# /etc/systemd/system/maccms-rust.service
-[Unit]
-Description=MacCMS Rust Edition
-After=network.target mongodb.service
-
-[Service]
-Type=simple
-User=maccms
-WorkingDirectory=/opt/maccms_rust
-ExecStart=/opt/maccms_rust/target/release/maccms_rust
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Nginx 反向代理
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /static {
-        alias /opt/maccms_rust/static;
-        expires 30d;
-    }
-}
 ```
 
 ## 🛠️ 开发指南

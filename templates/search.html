@@ -1,162 +1,123 @@
 {% extends "base.html" %}
 
-{% block title %}搜索{% if search_keyword %}: {{ search_keyword }}{% endif %} - {{ SITENAME | default(value="maccms-rust")
-}}{% endblock title %}
-{% block description %}搜索结果{% if search_keyword %}: {{ search_keyword }}{% endif %} - {{ SITEDESCRIPTION | default(value="搜索您感兴趣的精彩视频内容") }}{% endblock description %}
-{% block keywords %}搜索,视频搜索,电影搜索,电视剧搜索{% if search_keyword %},{{ search_keyword }}{% endif %},{{ SITEKEYWORDS | default(value="") }}{% endblock keywords %}
+{% block title %}搜索{% if search_keyword %}: {{ search_keyword }}{% endif %} - {{ SITENAME | default(value="maccms-rust") }}{% endblock %}
+
+{% block description %}搜索结果{% if search_keyword %}: {{ search_keyword }}{% endif %} - {{ SITEDESCRIPTION | default(value="搜索您感兴趣的精彩视频内容") }}{% endblock %}
+
+{% block keywords %}搜索,视频搜索,电影搜索,电视剧搜索{% if search_keyword %},{{ search_keyword }}{% endif %},{{ SITEKEYWORDS | default(value="") }}{% endblock %}
 
 {% block content %}
-<!-- Search Header -->
-<section class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
-    <div class="container mx-auto px-4">
-        <div class="text-center">
-            <h1 class="text-3xl md:text-4xl font-bold mb-4">视频搜索</h1>
-            <p class="text-lg opacity-90">发现您感兴趣的精彩内容</p>
-        </div>
-    </div>
-</section>
+<!-- 搜索头部区域 -->
+<div class="bg-gradient-to-r from-slate-800 to-slate-900 py-8 md:py-12">
+  <div class="container mx-auto max-w-6xl px-4 md:px-6">
+    <div class="text-center">
+      <h1 class="text-2xl md:text-3xl font-bold text-white mb-4">搜索影视内容</h1>
+      <p class="text-slate-300 mb-6 md:mb-8">发现更多精彩内容</p>
 
-<!-- Search Bar -->
-<section class="py-8 bg-white">
-    <div class="container mx-auto px-4">
-        <form action="/search" method="GET" class="max-w-2xl mx-auto">
-            <div class="relative">
-                <input type="text" name="wd" placeholder="搜索电影、电视剧、演员..."
-                    value="{{ search_keyword | default(value='') }}"
-                    class="w-full px-6 py-4 pr-12 rounded-full text-gray-800 text-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
-                <button type="submit"
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors">
-                    <i class="fas fa-search"></i>
-                </button>
-            </div>
+      <!-- 搜索框 -->
+      <div class="max-w-2xl mx-auto">
+        <form class="relative" method="GET" action="/search">
+          <input type="text" name="wd" value="{{ search_keyword | default(value='') }}" placeholder="请输入电影、电视剧或综艺名称"
+            class="w-full px-4 md:px-6 py-3 md:py-4 pr-12 md:pr-16 rounded-full bg-white text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary text-sm md:text-base">
+          <button type="submit"
+            class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-2 md:p-3 rounded-full hover:bg-rose-500 transition-colors">
+            <i class="fas fa-search text-sm md:text-base"></i>
+          </button>
         </form>
-    </div>
-</section>
+      </div>
 
-<!-- Search Results -->
-<div class="container mx-auto px-4 py-8">
-    {% if search_keyword %}
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">搜索结果</h2>
-        <p class="text-gray-600">
-            关键词 "<span class="font-medium text-blue-600">{{ search_keyword }}</span>"
-            共找到 <span class="font-medium text-blue-600">{{ search_results | length }}</span> 个视频
-        </p>
-    </div>
-    {% endif %}
-
-    {% if search_results %}
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-        {% for vod in search_results %}
-        <div class="video-card bg-white rounded-lg shadow-md overflow-hidden">
-            <a href="/detail/{{ vod._id['$oid'] }}" class="block">
-                <div class="relative">
-                    <img src="{{ vod.vod_pic | default(value='https://via.placeholder.com/200x300') }}"
-                        alt="{{ vod.vod_name }}" class="w-full h-48 object-cover" loading="lazy">
-                    <div class="absolute top-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
-                        {{ vod.vod_remarks | default(value='更新中') }}
-                    </div>
-                    {% if vod.vod_year %}
-                    <div class="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
-                        {{ vod.vod_year }}
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="p-3">
-                    <h3 class="font-semibold text-gray-800 text-sm mb-1 line-clamp-2">{{ vod.vod_name }}</h3>
-                    <div class="flex items-center justify-between text-xs text-gray-500">
-                        <span>
-                            {% if vod.vod_pubdate and vod.vod_pubdate['$date'] and
-                            vod.vod_pubdate['$date']['$numberLong'] %}
-                            <script>document.write(new Date(parseInt('{{ vod.vod_pubdate["$date"]["$numberLong"] }}')).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }));</script>
-                            {% else %}
-                            08-15
-                            {% endif %}
-                        </span>
-                        <div class="flex items-center">
-                            <i class="fas fa-play-circle mr-1"></i>
-                            <span>播放</span>
-                        </div>
-                    </div>
-                    {% if vod.vod_area %}
-                    <div class="mt-1">
-                        <span class="inline-block bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                            {{ vod.vod_area }}
-                        </span>
-                    </div>
-                    {% endif %}
-                </div>
-            </a>
+      <!-- 热门搜索标签 -->
+      <div class="mt-6 md:mt-8">
+        <p class="text-slate-400 text-sm md:text-base mb-3">热门搜索：</p>
+        <div class="flex flex-wrap justify-center gap-2 md:gap-3">
+          <a href="/search?wd=动作"
+            class="bg-slate-700 text-white px-3 md:px-4 py-1 md:py-2 rounded-full text-xs md:text-sm hover:bg-primary transition-colors">
+            动作
+          </a>
+          <a href="/search?wd=喜剧"
+            class="bg-slate-700 text-white px-3 md:px-4 py-1 md:py-2 rounded-full text-xs md:text-sm hover:bg-primary transition-colors">
+            喜剧
+          </a>
+          <a href="/search?wd=科幻"
+            class="bg-slate-700 text-white px-3 md:px-4 py-1 md:py-2 rounded-full text-xs md:text-sm hover:bg-primary transition-colors">
+            科幻
+          </a>
+          <a href="/search?wd=爱情"
+            class="bg-slate-700 text-white px-3 md:px-4 py-1 md:py-2 rounded-full text-xs md:text-sm hover:bg-primary transition-colors">
+            爱情
+          </a>
         </div>
-        {% endfor %}
+      </div>
     </div>
-    {% else %}
-    <div class="text-center py-16">
-        <div class="text-gray-400">
-            <i class="fas fa-search text-6xl mb-4"></i>
-            <p class="text-xl mb-4">
-                {% if search_keyword %}
-                没有找到与 "{{ search_keyword }}" 相关的视频
-                {% else %}
-                请输入搜索关键词
-                {% endif %}
-            </p>
-            <p class="text-gray-500 mb-6">
-                {% if search_keyword %}
-                尝试使用不同的关键词或检查拼写
-                {% else %}
-                在上方搜索框中输入您想找的电影、电视剧或演员
-                {% endif %}
-            </p>
-        </div>
-    </div>
-    {% endif %}
+  </div>
 </div>
 
-<!-- Popular Searches -->
-{% if not search_keyword %}
-<section class="py-12 bg-gray-100">
-    <div class="container mx-auto px-4">
-        <div class="text-center mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">热门搜索</h2>
-            <p class="text-gray-600">大家都在搜索这些内容</p>
-        </div>
+<!-- 搜索结果 -->
+<main class="container mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-8">
+  {% if search_keyword %}
+  <div class="mb-6">
+    <h2 class="text-xl md:text-2xl font-bold text-white mb-2">搜索结果</h2>
+    <p class="text-secondary">关键词："{{ search_keyword }}" 共找到 {{ search_results | length }} 个结果</p>
+  </div>
+  {% endif %}
 
-        <div class="flex flex-wrap justify-center gap-3">
-            <a href="/search?wd=动作"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-film mr-2"></i>动作
-            </a>
-            <a href="/search?wd=喜剧"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-laugh mr-2"></i>喜剧
-            </a>
-            <a href="/search?wd=科幻"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-rocket mr-2"></i>科幻
-            </a>
-            <a href="/search?wd=爱情"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-heart mr-2"></i>爱情
-            </a>
-            <a href="/search?wd=悬疑"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-user-secret mr-2"></i>悬疑
-            </a>
-            <a href="/search?wd=恐怖"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-ghost mr-2"></i>恐怖
-            </a>
-            <a href="/search?wd=战争"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-fighter-jet mr-2"></i>战争
-            </a>
-            <a href="/search?wd=动画"
-                class="px-4 py-2 bg-white rounded-full text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-magic mr-2"></i>动画
-            </a>
+  {% if search_results %}
+  <!-- 搜索结果列表 -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+    {% for vod in search_results %}
+    <!-- 内容卡片 -->
+    <div class="content-card bg-card-bg rounded-xl overflow-hidden">
+      <div class="relative aspect-[2/3]">
+        <a href="/detail/{{ vod._id['$oid'] }}">
+          <img src="{{ vod.vod_pic | default(value='/static/images/default-poster.jpg') }}" alt="{{ vod.vod_name }}海报"
+            class="w-full h-full object-cover">
+        </a>
+        {% if vod.vod_remarks %}
+        <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">{{ vod.vod_remarks }}
         </div>
+        {% endif %}
+        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+          <div class="flex justify-between items-center text-xs">
+            <span>{{ vod.vod_year | default(value='未知') }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="p-3">
+        <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">
+          <a href="/detail/{{ vod._id['$oid'] }}" class="text-white hover:text-primary transition-colors">
+            {{ vod.vod_name }}
+          </a>
+        </h3>
+        <p class="text-secondary text-xs md:text-sm line-clamp-1">{{ vod.vod_area | default(value='未分类') }}</p>
+      </div>
     </div>
-</section>
-{% endif %}
-{% endblock content %}
+    {% endfor %}
+  </div>
+
+
+
+  {% elif search_keyword %}
+  <!-- 无搜索结果 -->
+  <div class="text-center py-12 md:py-16">
+    <i class="fas fa-search text-6xl md:text-8xl text-slate-600 mb-4 md:mb-6"></i>
+    <h3 class="text-xl md:text-2xl font-bold text-white mb-2 md:mb-4">未找到相关内容</h3>
+    <p class="text-secondary mb-6 md:mb-8">试试其他关键词或浏览推荐内容</p>
+    <a href="/"
+      class="bg-primary text-white px-6 md:px-8 py-2 md:py-3 rounded-full hover:bg-rose-500 transition-colors text-sm md:text-base">
+      返回首页
+    </a>
+  </div>
+  {% else %}
+  <!-- 默认提示 -->
+  <div class="text-center py-12 md:py-16">
+    <i class="fas fa-search text-6xl md:text-8xl text-slate-600 mb-4 md:mb-6"></i>
+    <h3 class="text-xl md:text-2xl font-bold text-white mb-2 md:mb-4">请输入搜索关键词</h3>
+    <p class="text-secondary mb-6 md:mb-8">在上方搜索框中输入您想找的电影、电视剧或演员</p>
+    <a href="/"
+      class="bg-primary text-white px-6 md:px-8 py-2 md:py-3 rounded-full hover:bg-rose-500 transition-colors text-sm md:text-base">
+      返回首页
+    </a>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

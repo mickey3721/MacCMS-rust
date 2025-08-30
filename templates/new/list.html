@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}{{ display_category.type_name }} - {{ SITENAME | default(value="maccms-rust") }}{% endblock title %}
+{% block description %}{{ display_category.type_name }}频道 - {{ SITEDESCRIPTION | default(value="观看最新最全的" ~
+display_category.type_name ~ "视频，包括电影、电视剧、综艺、动漫等") }}{% endblock
+description %}
+{% block keywords %}{{ display_category.type_name }},在线{{ display_category.type_name }},免费{{ display_category.type_name
+}},高清{{ display_category.type_name }},{{ SITEKEYWORDS | default(value="") }}{% endblock keywords %}
+
+{% block content %}
+<!-- 主要内容区域 -->
+<main class="container mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-8">
+    <!-- 筛选区域 -->
+    <div class="bg-card-bg rounded-2xl p-4 md:p-6 mb-6 md:mb-8 shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <h2 class="mobile-text-lg md:text-xl font-bold">筛选条件</h2>
+
+            <!-- 排序选择 -->
+            <div class="flex items-center">
+                <span class="text-secondary mr-2">排序:</span>
+                <select
+                    class="bg-slate-800 text-white py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm md:text-base">
+                    <option value="latest">最新发布</option>
+                    <option value="views">最高播放</option>
+                    <option value="year-desc">年份从新到旧</option>
+                    <option value="year-asc">年份从旧到新</option>
+                </select>
+            </div>
+        </div>
+
+        <form id="filterForm" method="GET" class="space-y-5">
+            <!-- Sub-categories -->
+            {% if sub_categories %}
+            <div>
+                <h3 class="text-secondary mb-3 font-medium">二级分类</h3>
+                <div class="flex flex-wrap mobile-filter-container gap-2">
+                    <div class="flex items-center">
+                        <input type="radio" id="subTypeAll" name="sub_type" value="" {% if not current_sub_type
+                            %}checked{% endif %} class="filter-checkbox hidden">
+                        <label for="subTypeAll"
+                            class="filter-btn {% if not current_sub_type %}active bg-primary{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item cursor-pointer">
+                            全部
+                        </label>
+                    </div>
+                    {% for sub_cat in sub_categories %}
+                    <div class="flex items-center">
+                        <input type="radio" id="subType{{ sub_cat.type_id }}" name="sub_type"
+                            value="{{ sub_cat.type_id }}" {% if sub_cat.type_id==current_sub_type %}checked{% endif %}
+                            class="filter-checkbox hidden">
+                        <label for="subType{{ sub_cat.type_id }}"
+                            class="filter-btn {% if sub_cat.type_id == current_sub_type %}active bg-primary{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm mobile-filter-item cursor-pointer">
+                            {{ sub_cat.type_name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Area Filter -->
+            {% if subarea_options %}
+            <div>
+                <h3 class="text-secondary mb-3 font-medium">地区</h3>
+                <div class="flex flex-wrap gap-2">
+                    <div class="flex items-center">
+                        <input type="radio" id="areaAll" name="area" value="" {% if not current_area %}checked{% endif
+                            %} class="filter-checkbox hidden">
+                        <label for="areaAll"
+                            class="filter-btn {% if not current_area %}active bg-primary{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm cursor-pointer">
+                            全部
+                        </label>
+                    </div>
+                    {% for area in subarea_options %}
+                    <div class="flex items-center">
+                        <input type="radio" id="area{{ loop.index }}" name="area" value="{{ area }}" {% if
+                            current_area==area %}checked{% endif %} class="filter-checkbox hidden">
+                        <label for="area{{ loop.index }}"
+                            class="filter-btn {% if current_area == area %}active bg-primary{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm cursor-pointer">
+                            {{ area }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Year Filter -->
+            {% if subyear_options %}
+            <div>
+                <h3 class="text-secondary mb-3 font-medium">年份</h3>
+                <div class="flex flex-wrap gap-2">
+                    <div class="flex items-center">
+                        <input type="radio" id="yearAll" name="year" value="" {% if not current_year %}checked{% endif
+                            %} class="filter-checkbox hidden">
+                        <label for="yearAll"
+                            class="filter-btn {% if not current_year %}active bg-primary{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm cursor-pointer">
+                            全部
+                        </label>
+                    </div>
+                    {% for year in subyear_options %}
+                    <div class="flex items-center">
+                        <input type="radio" id="year{{ loop.index }}" name="year" value="{{ year }}" {% if
+                            current_year==year %}checked{% endif %} class="filter-checkbox hidden">
+                        <label for="year{{ loop.index }}"
+                            class="filter-btn {% if current_year == year %}active bg-primary{% else %}bg-slate-700 hover:bg-slate-600{% endif %} text-white px-3 py-1 md:px-4 md:py-2 rounded-full text-sm cursor-pointer">
+                            {{ year }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <button type="submit"
+                class="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-rose-500 transition-colors">
+                <i class="fas fa-search mr-2"></i>应用筛选
+            </button>
+        </form>
+    </div>
+
+    <!-- 电影列表 -->
+    <div class="mb-8">
+        <div class="flex justify-between items-center mb-5">
+            <h2 class="mobile-text-lg md:text-xl font-bold">{{ list_title or '热门电影' }}</h2>
+            <span class="text-secondary text-sm md:text-base">共找到 {{ total_items }} 部影片</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            {% for vod in vods %}
+            <!-- 电影卡片 -->
+            <div class="movie-card bg-card-bg rounded-xl overflow-hidden">
+                <a href="/detail/{{ vod._id['$oid'] }}" class="block">
+                    <div class="relative aspect-[2/3]">
+                        <img src="{{ vod.vod_pic | default(value='https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80') }}"
+                            alt="{{ vod.vod_name }}" class="w-full h-full object-cover">
+                        <div class="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">{{
+                            vod.vod_remarks | default(value='HD') }}</div>
+                        <div
+                            class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3 text-white">
+                            <div class="flex justify-between items-center text-xs">
+                                <span>{{ vod.vod_year }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-bold text-sm md:text-base mb-1 line-clamp-1">{{ vod.vod_name }}</h3>
+                        <p class="text-secondary text-xs md:text-sm line-clamp-1">{{ vod.vod_area }}</p>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not vods %}
+        <div class="text-center py-12">
+            <i class="fas fa-film text-6xl text-secondary mb-4"></i>
+            <p class="text-secondary text-lg">暂无电影数据</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 分页 -->
+    {% if pagination %}
+    <div class="flex justify-center mt-8">
+        <div class="flex items-center space-x-2 bg-card-bg rounded-xl p-2 shadow-lg">
+            {% if pagination.current_page > 1 %}
+            <a href="?page={{ pagination.current_page - 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+                class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <button class="pagination-btn disabled bg-slate-700 text-white p-2 rounded-lg">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            {% endif %}
+
+            {% for page_num in pagination.pages %}
+            {% if page_num != pagination.current_page %}
+            <a href="?page={{ page_num }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+                class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white w-10 h-10 rounded-lg flex items-center justify-center">{{
+                page_num }}</a>
+            {% else %}
+            <button class="pagination-btn active bg-primary text-white w-10 h-10 rounded-lg">{{ page_num }}</button>
+            {% endif %}
+            {% endfor %}
+
+            {% if pagination.current_page < pagination.total_pages %} <a
+                href="?page={{ pagination.current_page + 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+                class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg">
+                <i class="fas fa-chevron-right"></i>
+                </a>
+                {% else %}
+                <button class="pagination-btn disabled bg-slate-700 text-white p-2 rounded-lg">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</main>
+
+<style>
+    .movie-card {
+        transition: all 0.3s ease;
+        transform-origin: center bottom;
+    }
+
+    .movie-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .filter-btn {
+        transition: all 0.3s ease;
+    }
+
+    .filter-btn.active {
+        background-color: #f43f5e;
+        color: white;
+    }
+
+    .pagination-btn {
+        transition: all 0.3s ease;
+    }
+
+    .pagination-btn:hover:not(.disabled) {
+        background-color: #f43f5e;
+    }
+
+    .pagination-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* 移动端优化样式 */
+    @media (max-width: 768px) {
+        .mobile-padding {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .mobile-text-lg {
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+        }
+
+        .mobile-text-xl {
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+        }
+
+        .mobile-btn {
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            min-height: 2.8rem;
+        }
+
+        .mobile-btn-sm {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .mobile-filter-container {
+            flex-wrap: wrap;
+            padding-bottom: 0.5rem;
+        }
+
+        .mobile-filter-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .mobile-filter-item {
+            flex-shrink: 0;
+        }
+    }
+</style>
+
+<script>
+    // 筛选表单交互
+    const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+
+    filterCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            // 自动提交表单
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // 排序选择变化时自动提交表单
+    const sortSelect = document.querySelector('select');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function () {
+            // 将排序参数添加到表单中
+            const form = document.getElementById('filterForm');
+            let sortInput = form.querySelector('input[name="sort"]');
+            if (!sortInput) {
+                sortInput = document.createElement('input');
+                sortInput.type = 'hidden';
+                sortInput.name = 'sort';
+                form.appendChild(sortInput);
+            }
+            sortInput.value = this.value;
+            form.submit();
+        });
+    }
+</script>
+{% endblock %}
