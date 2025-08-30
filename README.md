@@ -4,16 +4,11 @@
 
 ## 视频截图
 
-<video src="https://raw.githubusercontent.com/TFTG-CLOUD/MacCMS-rust/refs/heads/main/screenshot.mp4" controls></video>
+[![项目演示视频](screenshot.png)](https://raw.githubusercontent.com/TFTG-CLOUD/MacCMS-rust/refs/heads/main/screenshot.mp4)
 
 ## 🚀 项目简介
 
 MacCMS Rust Edition 是基于 Rust 语言重构的高性能视频内容管理系统（CMS），完全兼容原版 MacCMS 的数据结构和 API 接口，但在性能、并发处理和内存管理方面有质的提升。每满百星我就会制作一个好看的模板，欢迎 star 收藏。
-
-### 注意事项
-
-- 由于本项目对安全极其重视，建议 release 二进制部署且设置 SERVER_HOST=127.0.0.1，这样无法通过 IP:8080 公网访问，必须反代之后且 ssl 之后通过域名访问。
-- 推荐使用 Release 包安装，且创建服务用户指定安装目录的读写权限方式来使用 systemctl，这样可以最大限度保证安全。
 
 ### ✨ 核心优势
 
