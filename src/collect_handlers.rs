@@ -19,7 +19,8 @@ fn parse_play_urls(vod_play_from: &str, vod_play_url: &Option<String>) -> Vec<Pl
         // 如果play_url包含#号，说明是多集内容
         if play_url.contains('#') {
             // 多集内容：按#分割各集
-            let episodes: Vec<&str> = play_url.split('#')
+            let episodes: Vec<&str> = play_url
+                .split('#')
                 .filter(|episode| !episode.trim().is_empty()) // 过滤空的episode
                 .collect();
 
@@ -765,6 +766,7 @@ pub async fn collect_single_video(
 
         if updated {
             existing.vod_pubdate = current_time;
+            existing.vod_remarks = Some(vod_data.vod_remarks.clone());
             vods_collection
                 .replace_one(doc! { "_id": existing.id }, &existing, None)
                 .await?;
