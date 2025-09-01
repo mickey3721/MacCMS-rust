@@ -13,12 +13,12 @@ mod template;
 mod web_handlers;
 
 use admin_handlers::{
-    batch_delete_vods, create_collection, create_config, create_indexes, create_or_update_binding,
+    batch_delete_source, batch_delete_vods, create_collection, create_config, create_indexes, create_or_update_binding,
     create_type, create_vod, delete_binding, delete_collection, delete_config, delete_type,
-    delete_vod, get_bindings, get_collect_progress, get_collection_binding_status, get_collections,
-    get_config_by_key, get_configs, get_index_status, get_indexes_data, get_running_tasks,
-    get_scheduled_task_logs, get_scheduled_task_status, get_statistics, get_types, get_vods_admin,
-    list_indexes, start_collection_collect, start_scheduled_task, stop_collect_task,
+    delete_vod, get_batch_delete_progress_handler, get_bindings, get_collect_progress, get_collection_binding_status, get_collections,
+    get_config_by_key, get_configs, get_index_status, get_indexes_data, get_running_batch_delete_tasks_handler,
+    get_running_tasks, get_scheduled_task_logs, get_scheduled_task_status, get_statistics, get_types, get_vods_admin,
+    list_indexes, start_collection_collect, start_scheduled_task, stop_batch_delete_task_handler, stop_collect_task,
     stop_scheduled_task, update_collection, update_config, update_scheduled_task_config,
     update_type, update_vod,
 };
@@ -385,6 +385,18 @@ async fn main() -> std::io::Result<()> {
                             .route(web::get().to(get_vods_admin))
                             .route(web::post().to(create_vod))
                             .route(web::delete().to(batch_delete_vods)),
+                    )
+                    .service(
+                        web::resource("/batch-delete-source").route(web::post().to(batch_delete_source)),
+                    )
+                    .service(
+                        web::resource("/batch-delete/progress/{task_id}").route(web::get().to(get_batch_delete_progress_handler)),
+                    )
+                    .service(
+                        web::resource("/batch-delete/running-tasks").route(web::get().to(get_running_batch_delete_tasks_handler)),
+                    )
+                    .service(
+                        web::resource("/batch-delete/stop/{task_id}").route(web::post().to(stop_batch_delete_task_handler)),
                     )
                     .service(
                         web::resource("/vods/{id}")
