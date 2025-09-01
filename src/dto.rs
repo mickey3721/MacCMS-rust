@@ -2,6 +2,30 @@ use serde::{Deserialize, Serialize, Deserializer};
 use std::fmt;
 // use crate::models::{Vod, Art}; // Assuming you might want to reuse these
 
+// Custom enum to support both i64 and String for vod_id
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum VodId {
+    Number(i64),
+    String(String),
+}
+
+impl VodId {
+    pub fn to_string(&self) -> String {
+        match self {
+            VodId::Number(n) => n.to_string(),
+            VodId::String(s) => s.clone(),
+        }
+    }
+    
+    pub fn to_i64(&self) -> Option<i64> {
+        match self {
+            VodId::Number(n) => Some(*n),
+            VodId::String(s) => s.parse().ok(),
+        }
+    }
+}
+
 // Struct to capture all possible query parameters from the API request
 #[derive(Debug, Deserialize)]
 pub struct ApiParams {
@@ -99,7 +123,7 @@ where
 // The full detail response might use the main Vod model
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VodApiListEntry {
-    pub vod_id: i64,
+    pub vod_id: VodId,
     pub vod_name: String,
     pub type_id: i32,
     pub type_name: Option<String>,

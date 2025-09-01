@@ -228,7 +228,17 @@ pub async fn get_all_running_tasks() -> Vec<serde_json::Value> {
 
 // 获取采集源分类列表
 pub async fn get_collect_categories(query: web::Query<CollectCategoriesQuery>) -> impl Responder {
-    let api_url = format!("{}?ac=list", query.url);
+    let mut api_url = query.url.clone();
+    if api_url.contains('?') {
+        // 如果URL已包含?，检查是否以?结尾或已有参数
+        if api_url.ends_with('?') {
+            api_url.push_str("ac=list");
+        } else {
+            api_url.push_str("&ac=list");
+        }
+    } else {
+        api_url.push_str("?ac=list");
+    }
 
     match reqwest::get(&api_url).await {
         Ok(response) => match response.text().await {

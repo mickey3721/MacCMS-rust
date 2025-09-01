@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse, Responder};
 use mongodb::{Database, bson::doc, options::FindOptions};
-use crate::dto::{ApiParams, JsonResponse, VodApiListEntry, Category, VideoFilterParams, CategoryHierarchy};
+use crate::dto::{ApiParams, JsonResponse, VodApiListEntry, VodId, Category, VideoFilterParams, CategoryHierarchy};
 use crate::models;
 use futures::{StreamExt, TryStreamExt};
 
@@ -61,7 +61,7 @@ pub async fn provide_vod(params: web::Query<ApiParams>, db: web::Data<Database>)
     // In a real app, you'd query the Type collection. For now, we'll use a placeholder.
     let list: Vec<VodApiListEntry> = vod_docs.into_iter().map(|vod| {
         VodApiListEntry {
-            vod_id: vod.id.unwrap().timestamp().to_string().parse().unwrap_or(0),
+            vod_id: VodId::Number(vod.id.unwrap().timestamp().to_string().parse().unwrap_or(0)),
             vod_name: vod.vod_name,
             type_id: vod.type_id,
             type_name: Some("N/A".to_string()),
