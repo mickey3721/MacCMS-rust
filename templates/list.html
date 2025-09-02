@@ -164,7 +164,7 @@ description %}
     <div class="flex justify-center mt-8">
         <div class="flex items-center space-x-2 bg-card-bg rounded-xl p-2 shadow-lg">
             {% if pagination.current_page > 1 %}
-            <a href="?page={{ pagination.current_page - 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+            <a href="?pg={{ pagination.current_page - 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
                 class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg">
                 <i class="fas fa-chevron-left"></i>
             </a>
@@ -176,7 +176,7 @@ description %}
 
             {% for page_num in pagination.pages %}
             {% if page_num != pagination.current_page %}
-            <a href="?page={{ page_num }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+            <a href="?pg={{ page_num }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
                 class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white w-10 h-10 rounded-lg flex items-center justify-center">{{
                 page_num }}</a>
             {% else %}
@@ -185,7 +185,7 @@ description %}
             {% endfor %}
 
             {% if pagination.current_page < pagination.total_pages %} <a
-                href="?page={{ pagination.current_page + 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+                href="?pg={{ pagination.current_page + 1 }}{% if current_sub_type %}&sub_type={{ current_sub_type }}{% endif %}{% if current_area %}&area={{ current_area }}{% endif %}{% if current_year %}&year={{ current_year }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
                 class="pagination-btn bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg">
                 <i class="fas fa-chevron-right"></i>
                 </a>
