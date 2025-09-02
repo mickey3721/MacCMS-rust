@@ -228,3 +228,32 @@ pub struct CategoryHierarchy {
     pub category: crate::models::Type,
     pub sub_categories: Vec<crate::models::Type>,
 }
+
+// User authentication DTOs
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RegisterRequest {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthResponse {
+    pub code: i32,
+    pub msg: String,
+    pub token: Option<String>,
+    pub user: Option<crate::models::User>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserResponse {
+    pub code: i32,
+    pub msg: String,
+    pub user: Option<crate::models::User>,
+}

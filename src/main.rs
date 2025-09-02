@@ -1,6 +1,7 @@
 mod admin_handlers;
 mod api_handlers;
 mod auth;
+mod auth_handlers;
 mod collect_handlers;
 mod db;
 mod dto;
@@ -13,15 +14,17 @@ mod template;
 mod web_handlers;
 
 use admin_handlers::{
-    batch_delete_source, batch_delete_vods, create_collection, create_config, create_indexes, create_or_update_binding,
-    create_type, create_vod, delete_binding, delete_collection, delete_config, delete_type,
-    delete_vod, get_batch_delete_progress_handler, get_bindings, get_collect_progress, get_collection_binding_status, get_collections,
-    get_config_by_key, get_configs, get_index_status, get_indexes_data, get_running_batch_delete_tasks_handler,
-    get_running_tasks, get_scheduled_task_logs, get_scheduled_task_status, get_statistics, get_types, get_vods_admin,
-    list_indexes, start_collection_collect, start_scheduled_task, stop_batch_delete_task_handler, stop_collect_task,
-    stop_scheduled_task, update_collection, update_config, update_scheduled_task_config,
-    update_type, update_vod,
+    batch_delete_source, batch_delete_vods, create_collection, create_config, create_indexes,
+    create_or_update_binding, create_type, create_vod, delete_binding, delete_collection,
+    delete_config, delete_type, delete_vod, get_batch_delete_progress_handler, get_bindings,
+    get_collect_progress, get_collection_binding_status, get_collections, get_config_by_key,
+    get_configs, get_index_status, get_indexes_data, get_running_batch_delete_tasks_handler,
+    get_running_tasks, get_scheduled_task_logs, get_scheduled_task_status, get_statistics,
+    get_types, get_vods_admin, list_indexes, start_collection_collect, start_scheduled_task,
+    stop_batch_delete_task_handler, stop_collect_task, stop_scheduled_task, update_collection,
+    update_config, update_scheduled_task_config, update_type, update_vod,
 };
+use auth_handlers::{get_current_user, login, logout, register};
 use collect_handlers::{get_collect_categories, get_collect_videos, start_collect_task};
 use site_data::SiteDataManager;
 
@@ -247,6 +250,11 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/contact").route(web::get().to(web_handlers::contact_page)))
             .service(web::resource("/privacy").route(web::get().to(web_handlers::privacy_page)))
             .service(web::resource("/terms").route(web::get().to(web_handlers::terms_page)))
+            // User pages
+            .service(
+                web::resource("/user/profile")
+                    .route(web::get().to(web_handlers::user_profile_page)),
+            )
             // Static files with cache configuration
             .service(
                 Files::new("/static", "./static")
@@ -318,6 +326,11 @@ async fn main() -> std::io::Result<()> {
                 web::resource("/api/filter-options")
                     .route(web::get().to(api_handlers::get_filter_options)),
             )
+            // Authentication API routes
+            .service(web::resource("/api/auth/login").route(web::post().to(login)))
+            .service(web::resource("/api/auth/register").route(web::post().to(register)))
+            .service(web::resource("/api/auth/logout").route(web::post().to(logout)))
+            .service(web::resource("/api/auth/me").route(web::get().to(get_current_user)))
             // Admin API routes
             .service(
                 web::scope("/api/admin")
@@ -387,16 +400,20 @@ async fn main() -> std::io::Result<()> {
                             .route(web::delete().to(batch_delete_vods)),
                     )
                     .service(
-                        web::resource("/batch-delete-source").route(web::post().to(batch_delete_source)),
+                        web::resource("/batch-delete-source")
+                            .route(web::post().to(batch_delete_source)),
                     )
                     .service(
-                        web::resource("/batch-delete/progress/{task_id}").route(web::get().to(get_batch_delete_progress_handler)),
+                        web::resource("/batch-delete/progress/{task_id}")
+                            .route(web::get().to(get_batch_delete_progress_handler)),
                     )
                     .service(
-                        web::resource("/batch-delete/running-tasks").route(web::get().to(get_running_batch_delete_tasks_handler)),
+                        web::resource("/batch-delete/running-tasks")
+                            .route(web::get().to(get_running_batch_delete_tasks_handler)),
                     )
                     .service(
-                        web::resource("/batch-delete/stop/{task_id}").route(web::post().to(stop_batch_delete_task_handler)),
+                        web::resource("/batch-delete/stop/{task_id}")
+                            .route(web::post().to(stop_batch_delete_task_handler)),
                     )
                     .service(
                         web::resource("/vods/{id}")
@@ -452,7 +469,7 @@ async fn main() -> std::io::Result<()> {
             )
     })
     .bind((
-        env::var("SERVER_HOST").unwrap_or("127.0.0.1".to_string()),
+        env::var("SERVER_HOST").unwrap_or("0.0.0.0".to_string()),
         env::var("SERVER_PORT")
             .unwrap_or("8080".to_string())
             .parse()

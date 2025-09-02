@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use mongodb::bson::{oid::ObjectId, DateTime};
+use serde::{Deserialize, Serialize};
 
 // Note: In a real application, you would want to use a library like `chrono` for more robust date/time handling.
 // Here we use mongodb::bson::DateTime for simplicity.
@@ -56,7 +56,6 @@ pub struct PlayUrl {
     pub url: String,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Art {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
@@ -83,7 +82,7 @@ pub struct User {
     pub id: Option<ObjectId>,
     pub user_name: String,
     // IMPORTANT: Passwords should ALWAYS be hashed. This is just the data model.
-    pub user_pwd: String, 
+    pub user_pwd: String,
     pub group_id: i32,
     pub user_status: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,6 +95,10 @@ pub struct User {
     pub user_portrait: Option<String>,
     pub user_points: i32,
     pub user_end_time: DateTime,
+    pub vip_level: Option<i32>,
+    pub vip_end_time: Option<DateTime>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<DateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -137,12 +140,12 @@ pub struct Type {
 pub struct Binding {
     #[serde(rename = "_id")] // Use the binding key as the MongoDB document ID
     pub id: String, // e.g., "source_flag_external_id"
-    pub source_flag: String, // 采集源标识，如API的唯一标识符
-    pub external_id: String, // 外部分类ID
-    pub local_type_id: i32, // 本地分类ID
+    pub source_flag: String,     // 采集源标识，如API的唯一标识符
+    pub external_id: String,     // 外部分类ID
+    pub local_type_id: i32,      // 本地分类ID
     pub local_type_name: String, // 本地分类名称
-    pub created_at: DateTime, // 创建时间
-    pub updated_at: DateTime, // 更新时间
+    pub created_at: DateTime,    // 创建时间
+    pub updated_at: DateTime,    // 更新时间
 }
 
 // Website configuration model
@@ -150,14 +153,14 @@ pub struct Binding {
 pub struct Config {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub config_key: String, // Configuration key (unique)
+    pub config_key: String,   // Configuration key (unique)
     pub config_value: String, // Configuration value
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config_desc: Option<String>, // Description
-    pub config_type: String, // Type: text, textarea, select, etc.
+    pub config_type: String,  // Type: text, textarea, select, etc.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config_group: Option<String>, // Group: site, seo, upload, etc.
-    pub config_sort: i32, // Sort order
+    pub config_sort: i32,     // Sort order
     pub updated_at: DateTime,
 }
 
@@ -175,24 +178,24 @@ fn default_download_retry() -> i32 {
 pub struct Collection {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub collect_name: String, // Collection source name
-    pub collect_url: String, // API URL
-    pub collect_type: i32, // Type: 1=video, 2=article
-    pub collect_mid: i32, // Model ID
-    pub collect_appid: String, // App ID
+    pub collect_name: String,   // Collection source name
+    pub collect_url: String,    // API URL
+    pub collect_type: i32,      // Type: 1=video, 2=article
+    pub collect_mid: i32,       // Model ID
+    pub collect_appid: String,  // App ID
     pub collect_appkey: String, // App Key
-    pub collect_param: String, // Additional parameters
+    pub collect_param: String,  // Additional parameters
     pub collect_filter: String, // Filter rules
     #[serde(default)]
     pub collect_filter_from: String, // Filter play sources
-    pub collect_opt: i32, // Collection option: 0=all, 1=today, 2=yesterday, 3=week
+    pub collect_opt: i32,       // Collection option: 0=all, 1=today, 2=yesterday, 3=week
     pub collect_sync_pic_opt: i32, // Sync picture option
     pub collect_remove_ad: i32, // Remove ads: 0=no, 1=yes
     #[serde(default = "default_convert_webp")]
     pub collect_convert_webp: i32, // Convert to WebP: 0=no, 1=yes
     #[serde(default = "default_download_retry")]
     pub collect_download_retry: i32, // Download retry times
-    pub collect_status: i32, // Status: 1=enabled, 0=disabled
+    pub collect_status: i32,    // Status: 1=enabled, 0=disabled
     pub created_at: DateTime,
     pub updated_at: DateTime,
 }
@@ -202,14 +205,14 @@ pub struct Collection {
 pub struct CollectTask {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub task_name: String, // Task name
+    pub task_name: String,    // Task name
     pub collect_id: ObjectId, // Collection source ID
-    pub task_status: i32, // Status: 0=pending, 1=running, 2=completed, 3=failed
-    pub task_progress: i32, // Progress percentage
-    pub task_total: i32, // Total items
-    pub task_success: i32, // Success count
-    pub task_failed: i32, // Failed count
-    pub task_log: String, // Task log
+    pub task_status: i32,     // Status: 0=pending, 1=running, 2=completed, 3=failed
+    pub task_progress: i32,   // Progress percentage
+    pub task_total: i32,      // Total items
+    pub task_success: i32,    // Success count
+    pub task_failed: i32,     // Failed count
+    pub task_log: String,     // Task log
     pub created_at: DateTime,
     pub updated_at: DateTime,
 }

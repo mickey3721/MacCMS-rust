@@ -1,5 +1,5 @@
-use mongodb::{Database, bson::doc};
 use crate::models::User;
+use mongodb::{bson::doc, Database};
 use std::env;
 
 // This function is called on startup to ensure the admin user exists.
@@ -9,7 +9,10 @@ pub async fn ensure_admin_user_exists(db: &Database) {
     let admin_user = env::var("ADMIN_USER").expect("ADMIN_USER not set in .env");
     let admin_pass = env::var("ADMIN_PASS").expect("ADMIN_PASS not set in .env");
 
-    match user_collection.find_one(doc! { "user_name": &admin_user }, None).await {
+    match user_collection
+        .find_one(doc! { "user_name": &admin_user }, None)
+        .await
+    {
         Ok(Some(_)) => {
             // Admin user already exists
             println!("Admin user '{}' already exists.", admin_user);
@@ -38,6 +41,9 @@ pub async fn ensure_admin_user_exists(db: &Database) {
                 user_portrait: None,
                 user_points: 0,
                 user_end_time: mongodb::bson::DateTime::from_millis(253402300799999), // Using a large timestamp for "never expires"
+                vip_level: None,
+                vip_end_time: None,
+                created_at: Some(mongodb::bson::DateTime::now()),
             };
 
             match user_collection.insert_one(new_admin, None).await {

@@ -470,6 +470,186 @@
       margin: 0;
     }
 
+    /* 用户认证按钮样式 */
+    .auth-buttons {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    /* 在移动端隐藏PC端的认证按钮 */
+    @media (max-width: 767px) {
+      .auth-buttons {
+        display: none;
+      }
+    }
+
+    .auth-btn {
+      background-color: #475569;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .auth-btn:hover {
+      background-color: #64748b;
+      transform: translateY(-1px);
+    }
+
+    .auth-btn.login-btn {
+      background-color: #f43f5e;
+    }
+
+    .auth-btn.login-btn:hover {
+      background-color: #e11d48;
+    }
+
+    .auth-btn.register-btn {
+      background-color: #3b82f6;
+    }
+
+    .auth-btn.register-btn:hover {
+      background-color: #2563eb;
+    }
+
+    /* 用户头像样式 */
+    .user-avatar-toggle {
+      padding: 0.25rem 0.75rem;
+      background-color: #475569;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .user-avatar-toggle:hover {
+      background-color: #64748b;
+    }
+
+    .user-avatar {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #f43f5e;
+    }
+
+    .user-dropdown .dropdown-menu {
+      width: 12rem;
+    }
+
+    .user-dropdown .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .user-dropdown .dropdown-item i {
+      width: 1rem;
+      text-align: center;
+    }
+
+    /* 在移动端隐藏PC端的用户下拉菜单 */
+    @media (max-width: 767px) {
+      .user-dropdown {
+        display: none;
+      }
+    }
+
+    /* 移动端用户认证样式 */
+    .mobile-auth {
+      margin-bottom: 1rem;
+    }
+
+    .mobile-auth-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .mobile-auth-btn {
+      flex: 1;
+      background-color: #475569;
+      color: white;
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .mobile-auth-btn:hover {
+      background-color: #64748b;
+    }
+
+    .mobile-auth-btn:first-child {
+      background-color: #f43f5e;
+    }
+
+    .mobile-auth-btn:first-child:hover {
+      background-color: #e11d48;
+    }
+
+    .mobile-auth-btn:last-child {
+      background-color: #3b82f6;
+    }
+
+    .mobile-auth-btn:last-child:hover {
+      background-color: #2563eb;
+    }
+
+    .mobile-user-info {
+      background-color: #475569;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .mobile-user-avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #f43f5e;
+      margin-right: 0.75rem;
+    }
+
+    .mobile-user-name {
+      color: white;
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+
+    .mobile-logout-btn {
+      background-color: #ef4444;
+      color: white;
+      border: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .mobile-logout-btn:hover {
+      background-color: #dc2626;
+    }
+
     /* 移动端优化样式 */
     @media (max-width: 768px) {
       .mobile-padding {
@@ -486,6 +666,180 @@
         font-size: 1.25rem;
         line-height: 1.75rem;
       }
+    }
+
+    /* Modal样式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .modal-content {
+      background-color: #1e293b;
+      border-radius: 0.75rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 90%;
+      max-width: 400px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      border-bottom: 1px solid #475569;
+    }
+
+    .modal-header h2 {
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 0.375rem;
+      transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+      color: white;
+      background-color: #475569;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      background-color: #475569;
+      color: white;
+      border: 1px solid #64748b;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #f43f5e;
+      box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.1);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: #f43f5e;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #e11d48;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background-color: #475569;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background-color: #64748b;
+    }
+
+    .form-footer {
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    .form-footer p {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
+    .form-footer a {
+      color: #f43f5e;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .form-footer a:hover {
+      text-decoration: underline;
     }
 
     /* 工具类 */
@@ -690,6 +1044,76 @@
   <!-- 主要内容区域 -->
   {% block content %}{% endblock %}
 
+  <!-- 登录Modal -->
+  <div id="loginModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>用户登录</h2>
+        <button class="modal-close" onclick="closeModal('loginModal')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginUsername">用户名</label>
+            <input type="text" id="loginUsername" name="username" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">密码</label>
+            <input type="password" id="loginPassword" name="password" required>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">登录</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('loginModal')">取消</button>
+          </div>
+        </form>
+        <div class="form-footer">
+          <p>还没有账号？ <a href="#" onclick="switchToRegister()">立即注册</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注册Modal -->
+  <div id="registerModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>用户注册</h2>
+        <button class="modal-close" onclick="closeModal('registerModal')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="registerUsername">用户名</label>
+            <input type="text" id="registerUsername" name="username" required>
+          </div>
+          <div class="form-group">
+            <label for="registerEmail">邮箱</label>
+            <input type="email" id="registerEmail" name="email" required>
+          </div>
+          <div class="form-group">
+            <label for="registerPassword">密码</label>
+            <input type="password" id="registerPassword" name="password" required>
+          </div>
+          <div class="form-group">
+            <label for="registerConfirmPassword">确认密码</label>
+            <input type="password" id="registerConfirmPassword" name="confirmPassword" required>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">注册</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('registerModal')">取消</button>
+          </div>
+        </form>
+        <div class="form-footer">
+          <p>已有账号？ <a href="#" onclick="switchToLogin()">立即登录</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 页脚 -->
   <footer class="bg-card-bg py-6 md:py-8 mt-8 md:mt-12">
     <div class="container mx-auto max-w-6xl px-4 md:px-6">
@@ -794,40 +1218,76 @@
       });
     }
 
-    // 播放记录下拉菜单初始化
+    // 下拉菜单初始化（分别处理不同类型的下拉菜单）
     function initDropdownMenu() {
-      const dropdown = document.querySelector('.dropdown');
-      const dropdownToggle = document.querySelector('.dropdown-toggle');
-      const dropdownMenu = document.querySelector('.dropdown-menu');
-      let isDropdownOpen = false;
+      // 处理播放记录下拉菜单
+      const historyDropdown = document.querySelector('.history-dropdown');
+      if (historyDropdown) {
+        const historyToggle = historyDropdown.querySelector('.dropdown-toggle');
+        const historyMenu = historyDropdown.querySelector('.dropdown-menu');
 
-      if (!dropdown || !dropdownToggle || !dropdownMenu) return;
+        if (historyToggle && historyMenu) {
+          historyToggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-      // 点击按钮切换菜单显示
-      dropdownToggle.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
+            // 关闭用户下拉菜单
+            const userMenu = document.querySelector('.user-dropdown .dropdown-menu');
+            if (userMenu) {
+              userMenu.classList.remove('show');
+            }
 
-        isDropdownOpen = !isDropdownOpen;
+            // 切换播放记录下拉菜单
+            historyMenu.classList.toggle('show');
+          });
 
-        if (isDropdownOpen) {
-          dropdownMenu.classList.add('show');
-        } else {
-          dropdownMenu.classList.remove('show');
+          historyMenu.addEventListener('click', function (e) {
+            e.stopPropagation();
+          });
         }
-      });
+      }
 
-      // 点击页面其他区域关闭下拉菜单
+      // 处理用户下拉菜单
+      const userDropdown = document.querySelector('.user-dropdown');
+      if (userDropdown) {
+        const userToggle = userDropdown.querySelector('.dropdown-toggle');
+        const userMenu = userDropdown.querySelector('.dropdown-menu');
+
+        if (userToggle && userMenu) {
+          userToggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // 关闭播放记录下拉菜单
+            const historyMenu = document.querySelector('.history-dropdown .dropdown-menu');
+            if (historyMenu) {
+              historyMenu.classList.remove('show');
+            }
+
+            // 切换用户下拉菜单
+            userMenu.classList.toggle('show');
+          });
+
+          userMenu.addEventListener('click', function (e) {
+            e.stopPropagation();
+          });
+        }
+      }
+
+      // 点击页面其他区域关闭所有下拉菜单
       document.addEventListener('click', function (e) {
-        if (!dropdown.contains(e.target)) {
-          isDropdownOpen = false;
-          dropdownMenu.classList.remove('show');
-        }
-      });
+        const historyDropdown = document.querySelector('.history-dropdown');
+        const userDropdown = document.querySelector('.user-dropdown');
+        const historyMenu = document.querySelector('.history-dropdown .dropdown-menu');
+        const userMenu = document.querySelector('.user-dropdown .dropdown-menu');
 
-      // 阻止菜单内部点击事件冒泡
-      dropdownMenu.addEventListener('click', function (e) {
-        e.stopPropagation();
+        if (historyMenu && historyDropdown && !historyDropdown.contains(e.target)) {
+          historyMenu.classList.remove('show');
+        }
+
+        if (userMenu && userDropdown && !userDropdown.contains(e.target)) {
+          userMenu.classList.remove('show');
+        }
       });
     }
 
@@ -975,7 +1435,7 @@
 
       // 渲染播放记录到下拉菜单
       renderHistory() {
-        const historyContainer = document.querySelector('.dropdown-content');
+        const historyContainer = document.querySelector('.history-dropdown .dropdown-content');
         if (!historyContainer) return;
 
         if (this.history.length === 0) {
@@ -1047,7 +1507,254 @@
       playHistory = new PlayHistory();
       playHistory.renderHistory();
       playHistory.renderMobileHistory();
+
+      // 初始化用户认证系统
+      window.userAuth = new UserAuth();
     });
+
+    // 用户认证管理
+    class UserAuth {
+      constructor() {
+        this.currentUser = null;
+        this.token = localStorage.getItem('auth_token') || null;
+        this.init();
+      }
+
+      init() {
+        // 检查登录状态
+        this.checkAuthStatus();
+
+        // 绑定事件
+        this.bindEvents();
+      }
+
+      bindEvents() {
+        // PC端登录注册按钮
+        document.getElementById('loginBtn')?.addEventListener('click', () => this.showModal('loginModal'));
+        document.getElementById('registerBtn')?.addEventListener('click', () => this.showModal('registerModal'));
+
+        // 移动端登录注册按钮
+        document.getElementById('mobileLoginBtn')?.addEventListener('click', () => this.showModal('loginModal'));
+        document.getElementById('mobileRegisterBtn')?.addEventListener('click', () => this.showModal('registerModal'));
+
+        // 注销按钮
+        document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
+        document.getElementById('mobileLogoutBtn')?.addEventListener('click', () => this.logout());
+
+        // 窗口大小改变时更新显示状态
+        window.addEventListener('resize', () => {
+          if (this.currentUser) {
+            this.showLoggedIn();
+          } else {
+            this.showNotLoggedIn();
+          }
+        });
+
+        // 表单提交
+        document.getElementById('loginForm')?.addEventListener('submit', (e) => this.handleLogin(e));
+        document.getElementById('registerForm')?.addEventListener('submit', (e) => this.handleRegister(e));
+
+        // 点击modal外部关闭
+        document.addEventListener('click', (e) => {
+          if (e.target.classList.contains('modal')) {
+            this.closeModal(e.target.id);
+          }
+        });
+      }
+
+      async checkAuthStatus() {
+        if (!this.token) {
+          this.showNotLoggedIn();
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${this.token}`
+            }
+          });
+
+          if (response.ok) {
+            const user = await response.json();
+            this.currentUser = user;
+            this.showLoggedIn();
+          } else {
+            this.token = null;
+            localStorage.removeItem('auth_token');
+            this.showNotLoggedIn();
+          }
+        } catch (error) {
+          console.error('检查认证状态失败:', error);
+          this.showNotLoggedIn();
+        }
+      }
+
+      showNotLoggedIn() {
+        const isMobile = window.innerWidth <= 767;
+        document.getElementById('notLoggedIn').style.display = isMobile ? 'none' : 'flex';
+        document.getElementById('loggedIn').style.display = 'none';
+        document.getElementById('mobileNotLoggedIn').style.display = 'flex';
+        document.getElementById('mobileLoggedIn').style.display = 'none';
+      }
+
+      showLoggedIn() {
+        const isMobile = window.innerWidth <= 767;
+        document.getElementById('notLoggedIn').style.display = 'none';
+        document.getElementById('loggedIn').style.display = isMobile ? 'none' : 'block';
+        document.getElementById('mobileNotLoggedIn').style.display = 'none';
+        document.getElementById('mobileLoggedIn').style.display = 'block';
+
+        // 更新用户信息显示
+        const displayName = this.currentUser.user.user_nick_name || this.currentUser.user.user_name;
+        // console.log(this.currentUser);
+        document.getElementById('userDisplayName').textContent = displayName;
+        document.getElementById('mobileUserDisplayName').textContent = displayName;
+
+        // 更新头像
+        const avatarUrl = this.currentUser.user_portrait || '/static/images/default-avatar.svg';
+        document.getElementById('userAvatar').src = avatarUrl;
+        document.getElementById('mobileUserAvatar').src = avatarUrl;
+      }
+
+      async handleLogin(e) {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const data = {
+          username: formData.get('username'),
+          password: formData.get('password')
+        };
+
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            this.token = result.token;
+            localStorage.setItem('auth_token', this.token);
+            this.currentUser = result.user;
+            this.showLoggedIn();
+            this.closeModal('loginModal');
+            this.showSuccessMessage('登录成功！');
+          } else {
+            this.showErrorMessage(result.message || '登录失败');
+          }
+        } catch (error) {
+          console.error('登录失败:', error);
+          this.showErrorMessage('网络错误，请稍后重试');
+        }
+      }
+
+      async handleRegister(e) {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const data = {
+          username: formData.get('username'),
+          email: formData.get('email'),
+          password: formData.get('password'),
+          confirmPassword: formData.get('confirmPassword')
+        };
+
+        // 验证密码
+        if (data.password !== data.confirmPassword) {
+          this.showErrorMessage('两次输入的密码不一致');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username: data.username,
+              email: data.email,
+              password: data.password
+            })
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            this.showSuccessMessage('注册成功！请登录');
+            this.closeModal('registerModal');
+            this.showModal('loginModal');
+          } else {
+            this.showErrorMessage(result.message || '注册失败');
+          }
+        } catch (error) {
+          console.error('注册失败:', error);
+          this.showErrorMessage('网络错误，请稍后重试');
+        }
+      }
+
+      async logout() {
+        try {
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.token}`
+            }
+          });
+        } catch (error) {
+          console.error('注销请求失败:', error);
+        }
+
+        this.token = null;
+        this.currentUser = null;
+        localStorage.removeItem('auth_token');
+        this.showNotLoggedIn();
+        this.showSuccessMessage('已成功注销');
+      }
+
+      showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+
+      closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+      }
+
+      showSuccessMessage(message) {
+        // 这里可以使用更好的通知系统，暂时用alert
+        alert(message);
+      }
+
+      showErrorMessage(message) {
+        alert(message);
+      }
+    }
+
+    // Modal控制函数
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      modal.classList.remove('show');
+      document.body.style.overflow = 'auto';
+    }
+
+    function switchToRegister() {
+      closeModal('loginModal');
+      userAuth.showModal('registerModal');
+    }
+
+    function switchToLogin() {
+      closeModal('registerModal');
+      userAuth.showModal('loginModal');
+    }
 
     // 导出函数供其他脚本使用
     if (typeof module !== 'undefined' && module.exports) {
@@ -1057,7 +1764,8 @@
         initSearch,
         addToHistory,
         getHistory,
-        clearHistory
+        clearHistory,
+        UserAuth
       };
     }
   </script>
