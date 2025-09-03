@@ -74,7 +74,7 @@ video.vod_actor }},{{ SITEKEYWORDS | default(value="") }}{% endblock %}
 
                 <div class="flex flex-wrap gap-3 mb-4 md:mb-6">
                     {% if video.vod_play_urls and video.vod_play_urls | length > 0 %}
-                    <a href="/play/{{ video._id }}/0-0"
+                    <a href="/play/{{ video._id['$oid'] }}/0-0"
                         class="play-btn bg-primary hover:bg-rose-500 text-white px-6 py-3 md:px-8 rounded-full font-bold text-base md:text-lg flex items-center justify-center mobile-btn w-full md:w-auto">
                         <i class="fas fa-play mr-2"></i>立即播放
                     </a>

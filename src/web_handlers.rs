@@ -1,6 +1,7 @@
 use crate::models::{Type, User, Vod};
 use crate::template::TERA;
 use actix_web::{web, HttpResponse, Responder};
+use chrono::Datelike;
 use futures::stream::TryStreamExt;
 use mongodb::{bson::doc, options::FindOptions, Database};
 use regex::Regex;
@@ -1483,6 +1484,37 @@ pub async fn refresh_cache_handler(
                 "success": false,
                 "message": format!("缓存刷新失败: {}", e)
             }))
+        }
+    }
+}
+
+// 用户中心页面处理器
+pub async fn user_profile_page(
+    db: web::Data<Database>,
+    site_data_manager: web::Data<crate::site_data::SiteDataManager>,
+) -> impl Responder {
+    match with_site_data(
+        db.clone(),
+        site_data_manager.clone(),
+        |context, _site_data| async move {
+            TERA.render("user/profile.html", &context)
+                .map_err(|e| {
+                    handle_template_rendering_error(
+                        "user/profile.html",
+                        &e,
+                        Some("User profile page"),
+                        Some("Public access - authentication handled by frontend")
+                    );
+                    Box::new(e) as Box<dyn std::error::Error>
+                })
+        },
+    )
+    .await
+    {
+        Ok(response) => response,
+        Err(e) => {
+            println!("User profile page error: {}", e);
+            HttpResponse::InternalServerError().body(format!("Error: {}", e))
         }
     }
 }

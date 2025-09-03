@@ -10,7 +10,9 @@
     <!-- PC端导航 -->
     <div class="navbar-nav">
       {% for category in categories %}
-      <a href="/list/{{ category.type_id }}" class="{% if current_category_id and current_category_id == category.type_id %}active{% endif %}">{{ category.type_name }}</a>
+      <a href="/list/{{ category.type_id }}"
+        class="{% if current_category_id and current_category_id == category.type_id %}active{% endif %}">{{
+        category.type_name }}</a>
       {% endfor %}
     </div>
   </div>
@@ -21,8 +23,44 @@
       <i class="fas fa-search"></i>
     </a>
 
+    <!-- 用户登录/注册/头像区域 - PC端 -->
+    <div id="userAuthSection">
+      <!-- 未登录状态：显示登录和注册按钮 -->
+      <div id="notLoggedIn" class="auth-buttons">
+        <button id="loginBtn" class="auth-btn login-btn">
+          <i class="fas fa-sign-in-alt"></i> 登录
+        </button>
+        <button id="registerBtn" class="auth-btn register-btn">
+          <i class="fas fa-user-plus"></i> 注册
+        </button>
+      </div>
+
+      <!-- 已登录状态：显示用户头像和下拉菜单 -->
+      <div id="loggedIn" class="user-dropdown" style="display: none;">
+        <div class="dropdown user-dropdown">
+          <button class="dropdown-toggle user-avatar-toggle">
+            <img id="userAvatar" src="/static/images/default-avatar.svg" alt="用户头像" class="user-avatar">
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-header">
+              <h3 id="userDisplayName">用户</h3>
+            </div>
+            <div class="dropdown-content">
+              <a href="/user/profile" class="dropdown-item">
+                <i class="fas fa-user"></i> 用户中心
+              </a>
+              <a href="#" id="logoutBtn" class="dropdown-item">
+                <i class="fas fa-sign-out-alt"></i> 注销
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 播放记录下拉 - PC端 -->
-    <div class="dropdown">
+    <div class="dropdown history-dropdown">
       <button class="dropdown-toggle">
         <i class="fas fa-history"></i> 播放记录
         <i class="fas fa-chevron-down"></i>
@@ -57,7 +95,9 @@
   <div class="mobile-nav-content">
     <div class="mobile-nav-links">
       {% for category in categories %}
-      <a href="/list/{{ category.type_id }}" class="{% if current_category_id and current_category_id == category.type_id %}active{% endif %}">{{ category.type_name }}</a>
+      <a href="/list/{{ category.type_id }}"
+        class="{% if current_category_id and current_category_id == category.type_id %}active{% endif %}">{{
+        category.type_name }}</a>
       {% endfor %}
     </div>
 
@@ -69,6 +109,30 @@
           <i class="fas fa-search"></i>
         </button>
       </form>
+    </div>
+
+    <!-- 用户登录/注册区域 - 移动端 -->
+    <div class="mobile-auth">
+      <div id="mobileNotLoggedIn" class="mobile-auth-buttons">
+        <button id="mobileLoginBtn" class="mobile-auth-btn">
+          <i class="fas fa-sign-in-alt"></i> 登录
+        </button>
+        <button id="mobileRegisterBtn" class="mobile-auth-btn">
+          <i class="fas fa-user-plus"></i> 注册
+        </button>
+      </div>
+
+      <div id="mobileLoggedIn" class="mobile-user-info" style="display: none;">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <img id="mobileUserAvatar" src="/static/images/default-avatar.svg" alt="用户头像" class="mobile-user-avatar">
+            <span id="mobileUserDisplayName" class="mobile-user-name">用户</span>
+          </div>
+          <button id="mobileLogoutBtn" class="mobile-logout-btn">
+            <i class="fas fa-sign-out-alt"></i> 注销
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- 播放记录 - 移动端 -->

@@ -1537,3 +1537,424 @@ pub async fn get_scheduled_task_logs(
 pub struct ScheduledTaskLogsQuery {
     pub limit: Option<i32>,
 }
+
+// --- Batch Delete Source API ---
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchDeleteSourceRequest {
+    pub source_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BatchDeleteProgress {
+    pub status: String,
+    pub processed_count: u64,
+    pub deleted_count: u64,
+    pub total_count: u64,
+    pub log: String,
+}
+
+impl Default for BatchDeleteProgress {
+    fn default() -> Self {
+        Self {
+            status: "unknown".to_string(),
+            processed_count: 0,
+            deleted_count: 0,
+            total_count: 0,
+            log: "未知状态".to_string(),
+        }
+    }
+}
+
+// 类型别名简化复杂类型
+type BatchDeleteProgressMap = std::collections::HashMap<
+    String,
+    (BatchDeleteProgress, String, Option<tokio::task::JoinHandle<()>>),
+>;
+type BatchDeleteProgressStore = tokio::sync::RwLock<BatchDeleteProgressMap>;
+
+// 全局批量删除任务进度存储
+static BATCH_DELETE_PROGRESS: std::sync::OnceLock<BatchDeleteProgressStore> = std::sync::OnceLock::new();
+
+// 初始化批量删除任务进度存储
+fn get_batch_delete_progress_store() -> &'static BatchDeleteProgressStore {
+    BATCH_DELETE_PROGRESS.get_or_init(|| tokio::sync::RwLock::new(std::collections::HashMap::new()))
+}
+
+// 获取批量删除任务进度
+pub async fn get_batch_delete_progress(task_id: &str) -> Option<BatchDeleteProgress> {
+    let store = get_batch_delete_progress_store();
+    let progress_map = store.read().await;
+    progress_map
+        .get(task_id)
+        .map(|(progress, _, _)| progress.clone())
+}
+
+// 更新批量删除任务进度
+async fn update_batch_delete_progress(task_id: &str, progress: BatchDeleteProgress, task_name: String) {
+    let store = get_batch_delete_progress_store();
+    let mut progress_map = store.write().await;
+    if let Some((current_progress, current_name, handle)) = progress_map.get_mut(task_id) {
+        *current_progress = progress;
+        *current_name = task_name;
+        // 保持原有的handle不变，不需要克隆
+    } else {
+        progress_map.insert(task_id.to_string(), (progress, task_name, None));
+    }
+}
+
+// 停止批量删除任务
+pub async fn stop_batch_delete_task(task_id: &str) -> bool {
+    let store = get_batch_delete_progress_store();
+    let mut progress_map = store.write().await;
+
+    if let Some((mut progress, task_name, handle)) = progress_map.remove(task_id) {
+        // 取消任务
+        if let Some(task_handle) = handle {
+            task_handle.abort();
+        }
+
+        // 标记任务为已停止
+        progress.status = "stopped".to_string();
+        progress.log = "任务已手动停止".to_string();
+
+        // 将任务重新插入，但状态为已停止且清除句柄
+        progress_map.insert(task_id.to_string(), (progress, task_name, None));
+
+        true
+    } else {
+        false
+    }
+}
+
+// 获取所有运行中的批量删除任务
+pub async fn get_all_batch_delete_tasks() -> Vec<serde_json::Value> {
+    let store = get_batch_delete_progress_store();
+    let progress_map = store.read().await;
+
+    let mut tasks = Vec::new();
+    for (task_id, (progress, task_name, _)) in progress_map.iter() {
+        tasks.push(json!({
+            "task_id": task_id,
+            "task_name": task_name,
+            "status": progress.status,
+            "processed_count": progress.processed_count,
+            "deleted_count": progress.deleted_count,
+            "total_count": progress.total_count,
+            "log": progress.log
+        }));
+    }
+
+    tasks
+}
+
+// 启动批量删除任务
+pub async fn start_batch_delete_source(
+    db: web::Data<Database>,
+    source_name: String,
+) -> String {
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let task_id_clone = task_id.clone();
+
+    let collection = db.collection::<Vod>("vods");
+    const BATCH_SIZE: i64 = 2000;
+
+    // 获取总视频数量
+    let total_count = match collection.count_documents(None, None).await {
+        Ok(count) => count as i64,
+        Err(e) => {
+            eprintln!("Failed to count vods: {}", e);
+
+            // 初始化失败状态
+            let failed_progress = BatchDeleteProgress {
+                status: "failed".to_string(),
+                processed_count: 0,
+                deleted_count: 0,
+                total_count: 0,
+                log: "无法获取视频总数".to_string(),
+            };
+
+            update_batch_delete_progress(&task_id, failed_progress, format!("批量删除播放源: {}", source_name)).await;
+            return task_id;
+        }
+    };
+
+    let total_count_u64 = total_count as u64;
+
+    // 初始化进度
+    let initial_progress = BatchDeleteProgress {
+        status: "running".to_string(),
+        processed_count: 0,
+        deleted_count: 0,
+        total_count: total_count_u64,
+        log: "开始批量删除播放源任务".to_string(),
+    };
+
+    update_batch_delete_progress(&task_id, initial_progress, format!("批量删除播放源: {}", source_name)).await;
+
+    // 启动后台任务
+    let db_clone = db.clone();
+    let source_name_clone = source_name.clone();
+    let task_handle = tokio::spawn(async move {
+        if let Err(e) = execute_batch_delete_inner(db_clone, &task_id_clone, &source_name_clone, BATCH_SIZE).await {
+            eprintln!("Batch delete failed: {}", e);
+
+            let failed_progress = BatchDeleteProgress {
+                status: "failed".to_string(),
+                processed_count: 0,
+                deleted_count: 0,
+                total_count: total_count_u64,
+                log: format!("批量删除失败: {}", e),
+            };
+            update_batch_delete_progress(&task_id_clone, failed_progress, format!("批量删除播放源: {}", source_name_clone)).await;
+        }
+    });
+
+    // 将任务句柄存储到进度Map中
+    let store = get_batch_delete_progress_store();
+    let mut progress_map = store.write().await;
+    if let Some((_, _, handle_ref)) = progress_map.get_mut(&task_id) {
+        *handle_ref = Some(task_handle);
+    } else {
+        progress_map.insert(task_id.clone(), (
+            BatchDeleteProgress {
+                status: "running".to_string(),
+                processed_count: 0,
+                deleted_count: 0,
+                total_count: total_count_u64,
+                log: "开始批量删除播放源任务".to_string(),
+            },
+            format!("批量删除播放源: {}", source_name),
+            Some(task_handle)
+        ));
+    }
+
+    task_id
+}
+
+// 执行批量删除的核心逻辑
+async fn execute_batch_delete_inner(
+    db: web::Data<Database>,
+    task_id: &str,
+    source_name: &str,
+    batch_size: i64,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let collection = db.collection::<Vod>("vods");
+
+    let mut processed_count = 0u64;
+    let mut deleted_count = 0u64;
+    let mut last_id: Option<mongodb::bson::oid::ObjectId> = None;
+
+    // 获取总视频数量
+    let total_count = collection.count_documents(None, None).await?;
+    let total_count_u64 = total_count as u64;
+
+    // 分批处理视频
+    loop {
+        // 构建查询，使用大于last_id来获取下一批
+        let mut filter = doc! {};
+
+        if let Some(last) = last_id {
+            filter.insert("_id", doc! {"$gt": last});
+        }
+
+        let find_options = FindOptions::builder()
+            .sort(doc! {"_id": 1})
+            .limit(batch_size)
+            .build();
+
+        let cursor = collection.find(filter, find_options).await?;
+        let mut vods_in_batch: Vec<Vod> = cursor.try_collect().await.unwrap_or_else(|_| vec![]);
+
+        if vods_in_batch.is_empty() {
+            // 更新最终状态
+            let completed_progress = BatchDeleteProgress {
+                status: "completed".to_string(),
+                processed_count: total_count_u64,
+                deleted_count,
+                total_count: total_count_u64,
+                log: format!("批量删除完成：处理了 {} 个视频，删除了 {} 个播放源", processed_count, deleted_count),
+            };
+            update_batch_delete_progress(task_id, completed_progress, format!("批量删除播放源: {}", source_name)).await;
+            break;
+        }
+
+        // 更新last_id为当前批次的最后一个视频ID
+        if let Some(last_vod) = vods_in_batch.last() {
+            last_id = last_vod.id;
+        }
+
+        // 处理这一批视频
+        for vod in &mut vods_in_batch {
+            if let Some(vod_id) = vod.id {
+                let mut has_changed = false;
+
+                // 检查vod_play_urls数组中是否有匹配的source_name
+                let mut new_play_urls = Vec::new();
+
+                for play_source in &vod.vod_play_urls {
+                    if play_source.source_name != source_name {
+                        new_play_urls.push(play_source.to_owned());
+                    } else {
+                        deleted_count += 1;
+                        has_changed = true;
+                    }
+                }
+
+                if has_changed {
+                    vod.vod_play_urls = new_play_urls;
+                }
+
+                // 如果有更改，更新数据库
+                if has_changed {
+                    // 使用mongodb::bson::to_document来序列化vod结构
+                    let mut update_doc = mongodb::bson::to_document(&vod)?;
+                    // 移除_id字段，因为我们不能更新主键
+                    update_doc.remove("_id");
+
+                    let update_doc = doc! {
+                        "$set": update_doc
+                    };
+
+                    // 这里我们可以选择不等待update_one，增加并发性
+                    if let Err(e) = collection.update_one(doc! {"_id": vod_id}, update_doc, None).await {
+                        eprintln!("Failed to update vod {}: {}", vod_id, e);
+                        // 继续处理，不因为单个错误而停止
+                    }
+                }
+            }
+
+            processed_count += 1;
+
+            // 每处理100个视频更新一次进度
+            if processed_count % 100 == 0 {
+                let progress = BatchDeleteProgress {
+                    status: "running".to_string(),
+                    processed_count,
+                    deleted_count,
+                    total_count: total_count_u64,
+                    log: format!("正在处理中... 已处理 {}/{} 个视频", processed_count, total_count_u64),
+                };
+                update_batch_delete_progress(task_id, progress, format!("批量删除播放源: {}", source_name)).await;
+            }
+        }
+
+        // 如果这一批没有达到BATCH_SIZE，说明已经处理完了所有数据
+        if vods_in_batch.len() < batch_size as usize {
+            // 更新最终状态
+            let completed_progress = BatchDeleteProgress {
+                status: "completed".to_string(),
+                processed_count: total_count_u64,
+                deleted_count,
+                total_count: total_count_u64,
+                log: format!("批量删除完成：处理了 {} 个视频，删除了 {} 个播放源", processed_count, deleted_count),
+            };
+            update_batch_delete_progress(task_id, completed_progress, format!("批量删除播放源: {}", source_name)).await;
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+// POST /api/admin/batch-delete-source
+pub async fn batch_delete_source(
+    db: web::Data<Database>,
+    request: web::Json<BatchDeleteSourceRequest>,
+    session: Session,
+) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+
+    let source_name = request.source_name.trim();
+    if source_name.is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "播放源名称不能为空"
+        }));
+    }
+
+    // 检查是否存在正在运行的任务
+    let running_tasks = get_all_batch_delete_tasks().await;
+    let has_running = running_tasks
+        .iter()
+        .any(|task| task["status"] == "running");
+
+    if has_running {
+        return HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "已有正在运行的批量删除任务，请等待完成后重试"
+        }));
+    }
+
+    // 启动后台任务
+    let task_id = start_batch_delete_source(db, source_name.to_string()).await;
+
+    HttpResponse::Ok().json(json!({
+        "success": true,
+        "message": "批量删除任务已启动",
+        "task_id": task_id,
+        "source_name": source_name
+    }))
+}
+
+// GET /api/admin/batch-delete/progress/{task_id}
+pub async fn get_batch_delete_progress_handler(path: web::Path<String>, session: Session) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+
+    let task_id = path.into_inner();
+
+    let progress = get_batch_delete_progress(&task_id).await
+        .unwrap_or_else(|| BatchDeleteProgress {
+            status: "not_found".to_string(),
+            processed_count: 0,
+            deleted_count: 0,
+            total_count: 0,
+            log: "任务不存在".to_string(),
+        });
+
+    HttpResponse::Ok().json(json!({
+        "success": true,
+        "progress": progress
+    }))
+}
+
+// GET /api/admin/batch-delete/running-tasks
+pub async fn get_running_batch_delete_tasks_handler(session: Session) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+
+    let tasks = get_all_batch_delete_tasks().await;
+
+    HttpResponse::Ok().json(json!({
+        "success": true,
+        "tasks": tasks
+    }))
+}
+
+// POST /api/admin/batch-delete/stop/{task_id}
+pub async fn stop_batch_delete_task_handler(path: web::Path<String>, session: Session) -> impl Responder {
+    if let Err(response) = check_auth(&session) {
+        return response;
+    }
+
+    let task_id = path.into_inner();
+
+    let stopped = stop_batch_delete_task(&task_id).await;
+
+    if stopped {
+        HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "批量删除任务已成功停止"
+        }))
+    } else {
+        HttpResponse::NotFound().json(json!({
+            "success": false,
+            "message": "任务不存在或已经停止"
+        }))
+    }
+}
