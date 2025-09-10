@@ -10,6 +10,8 @@
 
 MacCMS Rust Edition 是基于 Rust 语言重构的高性能视频内容管理系统（CMS），完全兼容原版 MacCMS 的数据结构和 API 接口，但在性能、并发处理和内存管理方面有质的提升。每满百星我就会制作一个好看的模板，欢迎 star 收藏。
 
+拥有配套的完整储存+多媒体处理（音频，视频，图片，压缩包）的多服务器系统：https://github.com/TFTG-CLOUD/cms-back CMS 可对接无限个处理服务器，无限扩容，支持水平扩展，无论是视频、音频，图集漫画都能扩展。
+
 ### ✨ 核心优势
 
 - **🔥 极致性能**: 相同配置服务器下，并发处理能力是原版 MacCMS 的 **10 倍以上**
@@ -538,15 +540,14 @@ wget https://raw.githubusercontent.com/TFTG-CLOUD/MacCMS-rust/refs/heads/main/en
 
 # 构建 Docker 镜像
 docker build -t maccms-rust:latest .
-
-#启动镜像
+ #启动镜像
 docker run -d \
   --name maccms-rust \
   -p 8080:8080 \
   -e ADMIN_USER=myuser \
   -e ADMIN_PASS=mypassword \
   -v ./maccms_data:/var/lib/mongodb \
-  -v ./maccms_static:/app/static \
+  -v ./maccms-rust:/app \
   -v ./maccms_logo:/var/log \
   --restart unless-stopped \
   maccms-rust:latest
@@ -554,9 +555,9 @@ docker run -d \
 #相关参数和文件夹说明
 ADMIN_USER 设置后台用户名
 ADMIN_PASS 设置后台密码，推荐复杂点
-/var/lib/mongodb 数据库文件夹，可自行备份
-/app/static 模板文件夹
-/var/log 相关运行日志
+./maccms_data 数据库文件夹，可自行备份
+./maccms-rust 程序源码目录
+./maccms_logo 相关运行日志
 
 # 查看容器状态
 docker ps

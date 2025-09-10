@@ -1,5 +1,8 @@
-use actix_session::Session;
-use actix_web::{web, HttpResponse, Responder};
+
+use crate::jwt_auth::AdminUser;
+use actix_web::{web, HttpResponse, Responder, Result, FromRequest, HttpMessage, HttpRequest};
+use bcrypt;
+use chrono;
 use futures::stream::TryStreamExt;
 use mongodb::{
     bson::doc,
@@ -8,21 +11,18 @@ use mongodb::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use uuid;
 
-use crate::index_manager::{IndexManager, CollectionIndexInfo, SingleIndexInfo};
-use crate::models::{Binding, Collection, Config, Type, Vod};
+use crate::dto::{
+    CardInfo, CardListResponse, CardPageParams, DeleteCardRequest, GenerateCardRequest,
+    GenerateCardResponse, SearchCardRequest, UserInfo, UserAdminInfo, UserListResponse,
+    CreateUserRequest, UpdateUserRequest, DeleteUserRequest, SearchUserRequest, UserPageParams,
+};
+use crate::index_manager::IndexManager;
+use crate::models::{Binding, Card, Collection, Config, Type, User, Vod};
 use crate::scheduled_task::ScheduledTaskManager;
+use crate::template::TERA;
 
-// Helper function to check if user is authenticated
-fn check_auth(session: &Session) -> Result<(), HttpResponse> {
-    match session.get::<String>("user_id") {
-        Ok(Some(_)) => Ok(()),
-        _ => Err(HttpResponse::Unauthorized().json(json!({
-            "error": "Unauthorized",
-            "message": "Please login to access this resource"
-        }))),
-    }
-}
 
 // --- DTOs for Admin API ---
 #[derive(Debug, Serialize, Deserialize)]
@@ -101,10 +101,7 @@ pub struct BatchDeleteRequest {
 // --- Category Management API ---
 
 // GET /api/admin/types
-pub async fn get_types(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_types(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
     let collection = db.collection::<Type>("types");
     let find_options = FindOptions::builder().sort(doc! {"type_sort": 1}).build();
 
@@ -123,10 +120,7 @@ pub async fn get_types(db: web::Data<Database>, session: Session) -> impl Respon
 // --- Collection Management API ---
 
 // GET /api/admin/collections
-pub async fn get_collections(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_collections(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
     let collection = db.collection::<Collection>("collections");
     let find_options = FindOptions::builder().sort(doc! {"created_at": -1}).build();
 
@@ -144,14 +138,10 @@ pub async fn get_collections(db: web::Data<Database>, session: Session) -> impl 
 }
 
 // POST /api/admin/collections
-pub async fn create_collection(
+pub async fn create_collection(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     collection_req: web::Json<CollectionRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Collection>("collections");
 
     let new_collection = Collection {
@@ -188,15 +178,11 @@ pub async fn create_collection(
 }
 
 // POST /api/admin/collections/{id}/collect
-pub async fn start_collection_collect(
+pub async fn start_collection_collect(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
     collect_req: Option<web::Json<CollectRequest>>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
 
     let collection_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
@@ -291,15 +277,11 @@ pub struct CollectRequest {
 }
 
 // PUT /api/admin/collections/{id}
-pub async fn update_collection(
+pub async fn update_collection(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
     collection_req: web::Json<CollectionRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Collection>("collections");
     let collection_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
@@ -349,10 +331,7 @@ pub async fn update_collection(
 }
 
 // GET /api/admin/collect/progress/{task_id}
-pub async fn get_collect_progress(path: web::Path<String>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_collect_progress(admin: crate::jwt_auth::AdminUser, path: web::Path<String>) -> impl Responder {
 
     let task_id = path.into_inner();
 
@@ -375,10 +354,7 @@ pub async fn get_collect_progress(path: web::Path<String>, session: Session) -> 
 }
 
 // GET /api/admin/collect/running-tasks
-pub async fn get_running_tasks(session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_running_tasks(admin: crate::jwt_auth::AdminUser) -> impl Responder {
 
     // 获取所有运行中的任务（从collect_handlers中的全局存储获取）
     let tasks = crate::collect_handlers::get_all_running_tasks().await;
@@ -390,10 +366,7 @@ pub async fn get_running_tasks(session: Session) -> impl Responder {
 }
 
 // POST /api/admin/collect/stop/{task_id}
-pub async fn stop_collect_task(path: web::Path<String>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn stop_collect_task(admin: crate::jwt_auth::AdminUser, path: web::Path<String>) -> impl Responder {
 
     let task_id = path.into_inner();
 
@@ -414,14 +387,10 @@ pub async fn stop_collect_task(path: web::Path<String>, session: Session) -> imp
 }
 
 // DELETE /api/admin/collections/{id}
-pub async fn delete_collection(
+pub async fn delete_collection(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Collection>("collections");
     let collection_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
@@ -461,14 +430,10 @@ pub struct VodsQuery {
 }
 
 // GET /api/admin/vods
-pub async fn get_vods_admin(
+pub async fn get_vods_admin(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     query: web::Query<VodsQuery>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
 
     let page = query.page.unwrap_or(1).max(1);
     let limit = query.limit.unwrap_or(20).min(100);
@@ -546,14 +511,10 @@ pub async fn get_vods_admin(
 }
 
 // POST /api/admin/vods
-pub async fn create_vod(
+pub async fn create_vod(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     vod_req: web::Json<VodRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Vod>("vods");
 
     let new_vod = Vod {
@@ -576,6 +537,7 @@ pub async fn create_vod(
         vod_hits_week: Some(0),
         vod_hits_month: Some(0),
         vod_score: Some("0.0".to_string()),
+        need_vip: 0,
         vod_play_urls: vec![], // Empty initially
     };
 
@@ -595,15 +557,11 @@ pub async fn create_vod(
 }
 
 // PUT /api/admin/vods/{id}
-pub async fn update_vod(
+pub async fn update_vod(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
     vod_req: web::Json<VodRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Vod>("vods");
     let vod_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
@@ -655,14 +613,10 @@ pub async fn update_vod(
 }
 
 // DELETE /api/admin/vods/{id}
-pub async fn delete_vod(
+pub async fn delete_vod(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Vod>("vods");
     let vod_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
@@ -688,14 +642,10 @@ pub async fn delete_vod(
 }
 
 // DELETE /api/admin/vods/batch
-pub async fn batch_delete_vods(
+pub async fn batch_delete_vods(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     batch_req: web::Json<BatchDeleteRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
 
     let collection = db.collection::<Vod>("vods");
     let mut object_ids = Vec::new();
@@ -746,10 +696,7 @@ pub async fn batch_delete_vods(
 // --- Website Configuration Management API ---
 
 // GET /api/admin/configs
-pub async fn get_configs(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_configs(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
     let collection = db.collection::<Config>("configs");
     let find_options = FindOptions::builder().sort(doc! {"config_sort": 1}).build();
 
@@ -766,14 +713,10 @@ pub async fn get_configs(db: web::Data<Database>, session: Session) -> impl Resp
 }
 
 // GET /api/admin/configs/{key}
-pub async fn get_config_by_key(
+pub async fn get_config_by_key(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Config>("configs");
     let config_key = path.into_inner();
 
@@ -791,14 +734,10 @@ pub async fn get_config_by_key(
 }
 
 // POST /api/admin/configs
-pub async fn create_config(
+pub async fn create_config(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     config_req: web::Json<ConfigRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Config>("configs");
 
     let new_config = Config {
@@ -830,15 +769,11 @@ pub async fn create_config(
 }
 
 // PUT /api/admin/configs/{key}
-pub async fn update_config(
+pub async fn update_config(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
     config_req: web::Json<ConfigRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Config>("configs");
     let config_key = path.into_inner();
 
@@ -875,14 +810,10 @@ pub async fn update_config(
 }
 
 // DELETE /api/admin/configs/{key}
-pub async fn delete_config(
+pub async fn delete_config(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Config>("configs");
     let config_key = path.into_inner();
 
@@ -908,14 +839,10 @@ pub async fn delete_config(
 }
 
 // POST /api/admin/types
-pub async fn create_type(
+pub async fn create_type(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     type_req: web::Json<TypeRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Type>("types");
 
     // In a real system, you'd generate type_id and handle type_mid, etc.
@@ -964,15 +891,11 @@ pub async fn create_type(
 }
 
 // PUT /api/admin/types/{id}
-pub async fn update_type(
+pub async fn update_type(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
     type_req: web::Json<TypeRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Type>("types");
     let type_id: i32 = match path.into_inner().parse() {
         Ok(id) => id,
@@ -1041,14 +964,10 @@ pub async fn update_type(
 }
 
 // DELETE /api/admin/types/{id}
-pub async fn delete_type(
+pub async fn delete_type(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Type>("types");
     let type_id: i32 = match path.into_inner().parse() {
         Ok(id) => id,
@@ -1078,14 +997,10 @@ pub async fn delete_type(
 
 // --- Binding Management API ---
 // DELETE /api/admin/bindings/{id}
-pub async fn delete_binding(
+pub async fn delete_binding(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
-    session: Session,
     path: web::Path<String>,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Binding>("bindings");
     let binding_id = path.into_inner();
 
@@ -1107,10 +1022,7 @@ pub async fn delete_binding(
     }
 }
 // GET /api/admin/bindings
-pub async fn get_bindings(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_bindings(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
     let collection = db.collection::<Binding>("bindings");
 
     match collection.find(None, None).await {
@@ -1126,14 +1038,10 @@ pub async fn get_bindings(db: web::Data<Database>, session: Session) -> impl Res
 }
 
 // GET /api/admin/collections/{id}/binding-status
-pub async fn get_collection_binding_status(
+pub async fn get_collection_binding_status(admin: crate::jwt_auth::AdminUser, 
     path: web::Path<String>,
     db: web::Data<Database>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
 
     let collection_id = match mongodb::bson::oid::ObjectId::parse_str(&path.into_inner()) {
         Ok(id) => id,
@@ -1191,14 +1099,10 @@ pub async fn get_collection_binding_status(
 }
 
 // POST /api/admin/bindings
-pub async fn create_or_update_binding(
+pub async fn create_or_update_binding(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     binding_req: web::Json<BindingRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     let collection = db.collection::<Binding>("bindings");
 
     let binding_id = format!("{}_{}", binding_req.source_flag, binding_req.external_id);
@@ -1261,10 +1165,7 @@ pub async fn create_or_update_binding(
 // --- Index Management API ---
 
 // POST /api/admin/indexes/create
-pub async fn create_indexes(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn create_indexes(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
 
     let index_manager = IndexManager::new(db.get_ref().clone());
 
@@ -1281,10 +1182,7 @@ pub async fn create_indexes(db: web::Data<Database>, session: Session) -> impl R
 }
 
 // GET /api/admin/indexes/status
-pub async fn get_index_status(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_index_status(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
 
     let index_manager = IndexManager::new(db.get_ref().clone());
 
@@ -1301,10 +1199,7 @@ pub async fn get_index_status(db: web::Data<Database>, session: Session) -> impl
 }
 
 // GET /api/admin/indexes/list
-pub async fn list_indexes(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn list_indexes(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
 
     let index_manager = IndexManager::new(db.get_ref().clone());
 
@@ -1325,10 +1220,7 @@ pub async fn list_indexes(db: web::Data<Database>, session: Session) -> impl Res
 }
 
 // GET /api/admin/indexes/data
-pub async fn get_indexes_data(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_indexes_data(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
 
     let index_manager = IndexManager::new(db.get_ref().clone());
     match index_manager.get_all_indexes().await {
@@ -1344,10 +1236,7 @@ pub async fn get_indexes_data(db: web::Data<Database>, session: Session) -> impl
 }
 
 // GET /api/admin/statistics
-pub async fn get_statistics(db: web::Data<Database>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_statistics(admin: crate::jwt_auth::AdminUser, db: web::Data<Database>) -> impl Responder {
 
     let mut stats = json!({
         "success": true,
@@ -1421,13 +1310,9 @@ pub async fn get_statistics(db: web::Data<Database>, session: Session) -> impl R
 // === 定时任务管理 API ===
 
 // GET /api/admin/scheduled-task/status
-pub async fn get_scheduled_task_status(
+pub async fn get_scheduled_task_status(admin: crate::jwt_auth::AdminUser, 
     task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
 
     match task_manager.get_task_status().await {
         Ok(status) => HttpResponse::Ok().json(json!({
@@ -1442,13 +1327,9 @@ pub async fn get_scheduled_task_status(
 }
 
 // POST /api/admin/scheduled-task/start
-pub async fn start_scheduled_task(
+pub async fn start_scheduled_task(admin: crate::jwt_auth::AdminUser, 
     task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     match task_manager.start_scheduled_task().await {
         Ok(_) => HttpResponse::Ok().json(json!({
             "success": true,
@@ -1462,13 +1343,9 @@ pub async fn start_scheduled_task(
 }
 
 // POST /api/admin/scheduled-task/stop
-pub async fn stop_scheduled_task(
+pub async fn stop_scheduled_task(admin: crate::jwt_auth::AdminUser, 
     task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     match task_manager.stop_scheduled_task().await {
         Ok(_) => HttpResponse::Ok().json(json!({
             "success": true,
@@ -1488,15 +1365,14 @@ pub struct ScheduledTaskConfigRequest {
     pub interval_hours: Option<i32>,
 }
 
-pub async fn update_scheduled_task_config(
+pub async fn update_scheduled_task_config(admin: crate::jwt_auth::AdminUser, 
     task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
-    session: Session,
     config: web::Json<ScheduledTaskConfigRequest>,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
-    match task_manager.update_config(config.enabled, config.interval_hours).await {
+    match task_manager
+        .update_config(config.enabled, config.interval_hours)
+        .await
+    {
         Ok(true) => HttpResponse::Ok().json(json!({
             "success": true,
             "message": "定时任务配置已更新"
@@ -1513,14 +1389,10 @@ pub async fn update_scheduled_task_config(
 }
 
 // GET /api/admin/scheduled-task/logs
-pub async fn get_scheduled_task_logs(
+pub async fn get_scheduled_task_logs(admin: crate::jwt_auth::AdminUser, 
     task_manager: web::Data<std::sync::Arc<ScheduledTaskManager>>,
-    session: Session,
     query: web::Query<ScheduledTaskLogsQuery>,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
     match task_manager.get_task_logs(query.limit).await {
         Ok(logs) => HttpResponse::Ok().json(json!({
             "success": true,
@@ -1569,12 +1441,17 @@ impl Default for BatchDeleteProgress {
 // 类型别名简化复杂类型
 type BatchDeleteProgressMap = std::collections::HashMap<
     String,
-    (BatchDeleteProgress, String, Option<tokio::task::JoinHandle<()>>),
+    (
+        BatchDeleteProgress,
+        String,
+        Option<tokio::task::JoinHandle<()>>,
+    ),
 >;
 type BatchDeleteProgressStore = tokio::sync::RwLock<BatchDeleteProgressMap>;
 
 // 全局批量删除任务进度存储
-static BATCH_DELETE_PROGRESS: std::sync::OnceLock<BatchDeleteProgressStore> = std::sync::OnceLock::new();
+static BATCH_DELETE_PROGRESS: std::sync::OnceLock<BatchDeleteProgressStore> =
+    std::sync::OnceLock::new();
 
 // 初始化批量删除任务进度存储
 fn get_batch_delete_progress_store() -> &'static BatchDeleteProgressStore {
@@ -1591,7 +1468,11 @@ pub async fn get_batch_delete_progress(task_id: &str) -> Option<BatchDeleteProgr
 }
 
 // 更新批量删除任务进度
-async fn update_batch_delete_progress(task_id: &str, progress: BatchDeleteProgress, task_name: String) {
+async fn update_batch_delete_progress(
+    task_id: &str,
+    progress: BatchDeleteProgress,
+    task_name: String,
+) {
     let store = get_batch_delete_progress_store();
     let mut progress_map = store.write().await;
     if let Some((current_progress, current_name, handle)) = progress_map.get_mut(task_id) {
@@ -1649,10 +1530,7 @@ pub async fn get_all_batch_delete_tasks() -> Vec<serde_json::Value> {
 }
 
 // 启动批量删除任务
-pub async fn start_batch_delete_source(
-    db: web::Data<Database>,
-    source_name: String,
-) -> String {
+pub async fn start_batch_delete_source(db: web::Data<Database>, source_name: String) -> String {
     let task_id = uuid::Uuid::new_v4().to_string();
     let task_id_clone = task_id.clone();
 
@@ -1674,7 +1552,12 @@ pub async fn start_batch_delete_source(
                 log: "无法获取视频总数".to_string(),
             };
 
-            update_batch_delete_progress(&task_id, failed_progress, format!("批量删除播放源: {}", source_name)).await;
+            update_batch_delete_progress(
+                &task_id,
+                failed_progress,
+                format!("批量删除播放源: {}", source_name),
+            )
+            .await;
             return task_id;
         }
     };
@@ -1690,13 +1573,21 @@ pub async fn start_batch_delete_source(
         log: "开始批量删除播放源任务".to_string(),
     };
 
-    update_batch_delete_progress(&task_id, initial_progress, format!("批量删除播放源: {}", source_name)).await;
+    update_batch_delete_progress(
+        &task_id,
+        initial_progress,
+        format!("批量删除播放源: {}", source_name),
+    )
+    .await;
 
     // 启动后台任务
     let db_clone = db.clone();
     let source_name_clone = source_name.clone();
     let task_handle = tokio::spawn(async move {
-        if let Err(e) = execute_batch_delete_inner(db_clone, &task_id_clone, &source_name_clone, BATCH_SIZE).await {
+        if let Err(e) =
+            execute_batch_delete_inner(db_clone, &task_id_clone, &source_name_clone, BATCH_SIZE)
+                .await
+        {
             eprintln!("Batch delete failed: {}", e);
 
             let failed_progress = BatchDeleteProgress {
@@ -1706,7 +1597,12 @@ pub async fn start_batch_delete_source(
                 total_count: total_count_u64,
                 log: format!("批量删除失败: {}", e),
             };
-            update_batch_delete_progress(&task_id_clone, failed_progress, format!("批量删除播放源: {}", source_name_clone)).await;
+            update_batch_delete_progress(
+                &task_id_clone,
+                failed_progress,
+                format!("批量删除播放源: {}", source_name_clone),
+            )
+            .await;
         }
     });
 
@@ -1716,17 +1612,20 @@ pub async fn start_batch_delete_source(
     if let Some((_, _, handle_ref)) = progress_map.get_mut(&task_id) {
         *handle_ref = Some(task_handle);
     } else {
-        progress_map.insert(task_id.clone(), (
-            BatchDeleteProgress {
-                status: "running".to_string(),
-                processed_count: 0,
-                deleted_count: 0,
-                total_count: total_count_u64,
-                log: "开始批量删除播放源任务".to_string(),
-            },
-            format!("批量删除播放源: {}", source_name),
-            Some(task_handle)
-        ));
+        progress_map.insert(
+            task_id.clone(),
+            (
+                BatchDeleteProgress {
+                    status: "running".to_string(),
+                    processed_count: 0,
+                    deleted_count: 0,
+                    total_count: total_count_u64,
+                    log: "开始批量删除播放源任务".to_string(),
+                },
+                format!("批量删除播放源: {}", source_name),
+                Some(task_handle),
+            ),
+        );
     }
 
     task_id
@@ -1773,9 +1672,17 @@ async fn execute_batch_delete_inner(
                 processed_count: total_count_u64,
                 deleted_count,
                 total_count: total_count_u64,
-                log: format!("批量删除完成：处理了 {} 个视频，删除了 {} 个播放源", processed_count, deleted_count),
+                log: format!(
+                    "批量删除完成：处理了 {} 个视频，删除了 {} 个播放源",
+                    processed_count, deleted_count
+                ),
             };
-            update_batch_delete_progress(task_id, completed_progress, format!("批量删除播放源: {}", source_name)).await;
+            update_batch_delete_progress(
+                task_id,
+                completed_progress,
+                format!("批量删除播放源: {}", source_name),
+            )
+            .await;
             break;
         }
 
@@ -1817,7 +1724,10 @@ async fn execute_batch_delete_inner(
                     };
 
                     // 这里我们可以选择不等待update_one，增加并发性
-                    if let Err(e) = collection.update_one(doc! {"_id": vod_id}, update_doc, None).await {
+                    if let Err(e) = collection
+                        .update_one(doc! {"_id": vod_id}, update_doc, None)
+                        .await
+                    {
                         eprintln!("Failed to update vod {}: {}", vod_id, e);
                         // 继续处理，不因为单个错误而停止
                     }
@@ -1833,9 +1743,17 @@ async fn execute_batch_delete_inner(
                     processed_count,
                     deleted_count,
                     total_count: total_count_u64,
-                    log: format!("正在处理中... 已处理 {}/{} 个视频", processed_count, total_count_u64),
+                    log: format!(
+                        "正在处理中... 已处理 {}/{} 个视频",
+                        processed_count, total_count_u64
+                    ),
                 };
-                update_batch_delete_progress(task_id, progress, format!("批量删除播放源: {}", source_name)).await;
+                update_batch_delete_progress(
+                    task_id,
+                    progress,
+                    format!("批量删除播放源: {}", source_name),
+                )
+                .await;
             }
         }
 
@@ -1847,9 +1765,17 @@ async fn execute_batch_delete_inner(
                 processed_count: total_count_u64,
                 deleted_count,
                 total_count: total_count_u64,
-                log: format!("批量删除完成：处理了 {} 个视频，删除了 {} 个播放源", processed_count, deleted_count),
+                log: format!(
+                    "批量删除完成：处理了 {} 个视频，删除了 {} 个播放源",
+                    processed_count, deleted_count
+                ),
             };
-            update_batch_delete_progress(task_id, completed_progress, format!("批量删除播放源: {}", source_name)).await;
+            update_batch_delete_progress(
+                task_id,
+                completed_progress,
+                format!("批量删除播放源: {}", source_name),
+            )
+            .await;
             break;
         }
     }
@@ -1858,14 +1784,10 @@ async fn execute_batch_delete_inner(
 }
 
 // POST /api/admin/batch-delete-source
-pub async fn batch_delete_source(
+pub async fn batch_delete_source(admin: crate::jwt_auth::AdminUser, 
     db: web::Data<Database>,
     request: web::Json<BatchDeleteSourceRequest>,
-    session: Session,
 ) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
 
     let source_name = request.source_name.trim();
     if source_name.is_empty() {
@@ -1877,9 +1799,7 @@ pub async fn batch_delete_source(
 
     // 检查是否存在正在运行的任务
     let running_tasks = get_all_batch_delete_tasks().await;
-    let has_running = running_tasks
-        .iter()
-        .any(|task| task["status"] == "running");
+    let has_running = running_tasks.iter().any(|task| task["status"] == "running");
 
     if has_running {
         return HttpResponse::BadRequest().json(json!({
@@ -1900,14 +1820,14 @@ pub async fn batch_delete_source(
 }
 
 // GET /api/admin/batch-delete/progress/{task_id}
-pub async fn get_batch_delete_progress_handler(path: web::Path<String>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_batch_delete_progress_handler(admin: crate::jwt_auth::AdminUser, 
+    path: web::Path<String>,
+) -> impl Responder {
 
     let task_id = path.into_inner();
 
-    let progress = get_batch_delete_progress(&task_id).await
+    let progress = get_batch_delete_progress(&task_id)
+        .await
         .unwrap_or_else(|| BatchDeleteProgress {
             status: "not_found".to_string(),
             processed_count: 0,
@@ -1923,10 +1843,7 @@ pub async fn get_batch_delete_progress_handler(path: web::Path<String>, session:
 }
 
 // GET /api/admin/batch-delete/running-tasks
-pub async fn get_running_batch_delete_tasks_handler(session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn get_running_batch_delete_tasks_handler(admin: crate::jwt_auth::AdminUser) -> impl Responder {
 
     let tasks = get_all_batch_delete_tasks().await;
 
@@ -1937,10 +1854,9 @@ pub async fn get_running_batch_delete_tasks_handler(session: Session) -> impl Re
 }
 
 // POST /api/admin/batch-delete/stop/{task_id}
-pub async fn stop_batch_delete_task_handler(path: web::Path<String>, session: Session) -> impl Responder {
-    if let Err(response) = check_auth(&session) {
-        return response;
-    }
+pub async fn stop_batch_delete_task_handler(admin: crate::jwt_auth::AdminUser, 
+    path: web::Path<String>,
+) -> impl Responder {
 
     let task_id = path.into_inner();
 
@@ -1958,3 +1874,884 @@ pub async fn stop_batch_delete_task_handler(path: web::Path<String>, session: Se
         }))
     }
 }
+
+// ============= 卡卷管理功能 =============
+
+// GET /admin/cards
+pub async fn admin_cards_page(
+    db: web::Data<Database>,
+    site_data_manager: web::Data<crate::site_data::SiteDataManager>,
+) -> impl Responder {
+
+    match crate::web_handlers::with_site_data(
+        db.clone(),
+        site_data_manager.clone(),
+        |mut context, _site_data| async move {
+            context.insert("page_title", "卡卷管理");
+
+            TERA.render("admin/cards.html", &context).map_err(|e| {
+                crate::web_handlers::handle_template_rendering_error(
+                    "admin/cards.html",
+                    &e,
+                    Some("Admin cards management page"),
+                    Some("Admin access required"),
+                );
+                Box::new(e) as Box<dyn std::error::Error>
+            })
+        },
+    )
+    .await
+    {
+        Ok(response) => response,
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "error": format!("Template error: {}", e)
+        })),
+    }
+}
+
+// GET /api/admin/cards
+pub async fn get_cards_list(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    query: web::Query<CardPageParams>,
+) -> impl Responder {
+
+    let page = query.page.unwrap_or(1);
+    let limit = query.limit.unwrap_or(20);
+    let skip = (page - 1) * limit;
+
+    let cards_collection = db.collection::<Card>("cards");
+    let users_collection = db.collection::<User>("users");
+
+    // 获取卡卷总数
+    let total = cards_collection
+        .count_documents(None, None)
+        .await
+        .unwrap_or(0);
+
+    // 获取卡卷列表
+    let find_options = FindOptions::builder()
+        .skip(skip as u64)
+        .limit(limit as i64)
+        .sort(doc! {"created_at": -1})
+        .build();
+
+    let mut cards = match cards_collection.find(None, find_options).await {
+        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
+        Err(_) => vec![],
+    };
+
+    // 获取用户信息并转换格式
+    let mut card_infos = Vec::new();
+    for card in &mut cards {
+        let used_by = if card.used {
+            if let Some(user_id) = card.used_by {
+                match users_collection.find_one(doc! {"_id": user_id}, None).await {
+                    Ok(Some(user)) => Some(UserInfo {
+                        id: user_id.to_string(),
+                        user_name: user.user_name,
+                        user_nick_name: user.user_nick_name,
+                    }),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let card_info = CardInfo {
+            id: card.id.unwrap_or_default().to_string(),
+            code: card.code.clone(),
+            used: card.used,
+            vip_level: card.vip_level,
+            duration_days: card.duration_days,
+            created_at: card.created_at.to_string(),
+            used_by,
+            used_at: card.used_at.map(|dt| dt.to_string()),
+        };
+        card_infos.push(card_info);
+    }
+
+    HttpResponse::Ok().json(CardListResponse {
+        code: 1,
+        msg: "获取卡卷列表成功".to_string(),
+        cards: card_infos,
+        total: total.try_into().unwrap_or(0),
+    })
+}
+
+// POST /api/admin/cards/generate
+pub async fn generate_cards(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<GenerateCardRequest>,
+) -> impl Responder {
+
+    // 验证参数
+    if request.count <= 0 || request.count > 1000 {
+        return HttpResponse::BadRequest().json(json!({
+            "code": 0,
+            "msg": "生成数量必须在1-1000之间"
+        }));
+    }
+
+    if request.vip_level < 1 || request.duration_days <= 0 {
+        return HttpResponse::BadRequest().json(json!({
+            "code": 0,
+            "msg": "会员等级和时长必须大于0"
+        }));
+    }
+
+    let cards_collection = db.collection::<Card>("cards");
+    let mut generated_cards = Vec::new();
+    let mut generated_codes = Vec::new();
+
+    // 生成随机卡卷
+    for _ in 0..request.count {
+        let code = generate_random_code();
+        let new_card = Card {
+            id: None,
+            code: code.clone(),
+            used: false,
+            vip_level: request.vip_level,
+            duration_days: request.duration_days,
+            created_at: mongodb::bson::DateTime::now(),
+            used_by: None,
+            used_at: None,
+        };
+
+        match cards_collection.insert_one(new_card, None).await {
+            Ok(_) => {
+                generated_cards.push(code.clone());
+                generated_codes.push(code);
+            }
+            Err(e) => {
+                eprintln!("Failed to insert card: {}", e);
+            }
+        }
+    }
+
+    HttpResponse::Ok().json(GenerateCardResponse {
+        code: 1,
+        msg: format!("成功生成 {} 张卡卷", generated_cards.len()),
+        generated_count: generated_cards.len() as i32,
+        cards: generated_codes,
+    })
+}
+
+// POST /api/admin/cards/delete
+pub async fn delete_cards(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<DeleteCardRequest>,
+) -> impl Responder {
+
+    if request.card_ids.is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "code": 0,
+            "msg": "请选择要删除的卡卷"
+        }));
+    }
+
+    let cards_collection = db.collection::<Card>("cards");
+    let mut deleted_count = 0;
+
+    for card_id_str in &request.card_ids {
+        if let Ok(card_id) = mongodb::bson::oid::ObjectId::parse_str(card_id_str) {
+            match cards_collection
+                .delete_one(doc! {"_id": card_id}, None)
+                .await
+            {
+                Ok(result) => {
+                    if result.deleted_count > 0 {
+                        deleted_count += 1;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to delete card {}: {}", card_id_str, e);
+                }
+            }
+        }
+    }
+
+    HttpResponse::Ok().json(json!({
+        "code": 1,
+        "msg": format!("成功删除 {} 张卡卷", deleted_count),
+        "deleted_count": deleted_count
+    }))
+}
+
+// POST /api/admin/cards/search
+pub async fn search_cards(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<SearchCardRequest>,
+) -> impl Responder {
+
+    if request.code.trim().is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "code": 0,
+            "msg": "请输入卡卷代码"
+        }));
+    }
+
+    let cards_collection = db.collection::<Card>("cards");
+    let users_collection = db.collection::<User>("users");
+
+    let card = match cards_collection
+        .find_one(doc! {"code": request.code.trim()}, None)
+        .await
+    {
+        Ok(Some(card)) => card,
+        Ok(None) => {
+            return HttpResponse::Ok().json(CardListResponse {
+                code: 1,
+                msg: "未找到匹配的卡卷".to_string(),
+                cards: vec![],
+                total: 0,
+            });
+        }
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "code": 0,
+                "msg": "服务器错误"
+            }));
+        }
+    };
+
+    // 获取用户信息
+    let used_by = if card.used {
+        if let Some(user_id) = card.used_by {
+            match users_collection.find_one(doc! {"_id": user_id}, None).await {
+                Ok(Some(user)) => Some(UserInfo {
+                    id: user_id.to_string(),
+                    user_name: user.user_name,
+                    user_nick_name: user.user_nick_name,
+                }),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let card_info = CardInfo {
+        id: card.id.unwrap_or_default().to_string(),
+        code: card.code,
+        used: card.used,
+        vip_level: card.vip_level,
+        duration_days: card.duration_days,
+        created_at: card.created_at.to_string(),
+        used_by,
+        used_at: card.used_at.map(|dt| dt.to_string()),
+    };
+
+    HttpResponse::Ok().json(CardListResponse {
+        code: 1,
+        msg: "搜索成功".to_string(),
+        cards: vec![card_info],
+        total: 1,
+    })
+}
+
+// 生成10位随机卡卷代码
+fn generate_random_code() -> String {
+    use rand::{thread_rng, Rng};
+    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let mut rng = thread_rng();
+    let code: String = (0..10)
+        .map(|_| {
+            let idx = rng.gen_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect();
+    code
+}
+
+// DTO for batch VIP setting request
+#[derive(Debug, Deserialize)]
+pub struct BatchSetVipRequest {
+    pub vod_ids: Vec<String>,
+    pub need_vip: i32,
+}
+
+// Batch set VIP content
+pub async fn batch_set_vip(
+    _admin: AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<BatchSetVipRequest>,
+) -> Result<HttpResponse> {
+
+    let vod_ids = &request.vod_ids;
+    let need_vip = request.need_vip;
+
+    if vod_ids.is_empty() {
+        return Ok(HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "请选择要设置的视频"
+        })));
+    }
+
+    if need_vip < 0 || need_vip > 5 {
+        return Ok(HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "VIP等级必须在0-5之间"
+        })));
+    }
+
+    let vod_collection = db.collection::<Vod>("vods");
+
+    // Convert string IDs to ObjectId
+    let object_ids: Result<Vec<_>, _> = vod_ids
+        .iter()
+        .map(|id| mongodb::bson::oid::ObjectId::parse_str(id))
+        .collect();
+
+    let object_ids = match object_ids {
+        Ok(ids) => ids,
+        Err(e) => {
+            return Ok(HttpResponse::BadRequest().json(json!({
+                "success": false,
+                "message": format!("无效的视频ID: {}", e)
+            })));
+        }
+    };
+
+    // Update multiple videos
+    let result = vod_collection
+        .update_many(
+            doc! { "_id": { "$in": object_ids } },
+            doc! { "$set": { "need_vip": need_vip } },
+            None,
+        )
+        .await;
+
+    match result {
+        Ok(update_result) => Ok(HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": format!("成功设置 {} 个视频的VIP等级", update_result.modified_count),
+            "modified_count": update_result.modified_count
+        }))),
+        Err(e) => {
+            eprintln!("Database error when batch setting VIP: {}", e);
+            Ok(HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "服务器错误"
+            })))
+        }
+    }
+}
+
+// User management functions
+pub async fn admin_users_page(
+    db: web::Data<Database>,
+    site_data_manager: web::Data<crate::site_data::SiteDataManager>,
+) -> impl Responder {
+
+    match crate::web_handlers::with_site_data(
+        db.clone(),
+        site_data_manager.clone(),
+        |mut context, _site_data| async move {
+            context.insert("page_title", "用户管理");
+
+            TERA.render("admin/users.html", &context).map_err(|e| {
+                crate::web_handlers::handle_template_rendering_error(
+                    "admin/users.html",
+                    &e,
+                    Some("Admin user management page"),
+                    Some("Admin access required"),
+                );
+                Box::new(e) as Box<dyn std::error::Error>
+            })
+        },
+    )
+    .await
+    {
+        Ok(response) => response,
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "error": format!("Template error: {}", e)
+        })),
+    }
+}
+
+pub async fn get_users_list(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    query: web::Query<crate::dto::UserPageParams>,
+) -> impl Responder {
+
+    let page = query.page.unwrap_or(1);
+    let limit = query.limit.unwrap_or(20);
+    let skip = (page - 1) * limit;
+
+    let user_collection = db.collection::<User>("users");
+    
+    // Get total count
+    let total = match user_collection.count_documents(None, None).await {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("Database error when counting users: {}", e);
+            return HttpResponse::InternalServerError().json(crate::dto::UserListResponse {
+                code: 500,
+                msg: "服务器错误".to_string(),
+                users: vec![],
+                total: 0,
+            });
+        }
+    };
+
+    // Get users with pagination
+    let find_options = FindOptions::builder()
+        .skip(skip as u64)
+        .limit(limit as i64)
+        .sort(doc! { "created_at": -1 })
+        .build();
+
+    let users: Vec<User> = match user_collection.find(None, find_options).await {
+        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
+        Err(e) => {
+            eprintln!("Database error when fetching users: {}", e);
+            return HttpResponse::InternalServerError().json(crate::dto::UserListResponse {
+                code: 500,
+                msg: "服务器错误".to_string(),
+                users: vec![],
+                total: 0,
+            });
+        }
+    };
+
+    // Convert to UserAdminInfo format
+    let user_infos: Vec<crate::dto::UserAdminInfo> = users
+        .into_iter()
+        .map(|user| crate::dto::UserAdminInfo {
+            id: user.id.map_or_else(|| "".to_string(), |id| id.to_string()),
+            user_name: user.user_name,
+            user_nick_name: user.user_nick_name,
+            user_email: user.user_email.unwrap_or_else(|| "".to_string()),
+            vip_level: user.vip_level.unwrap_or(0),
+            vip_end_time: user.vip_end_time.map(|end| end.to_string()),
+            created_at: user.created_at.map_or_else(|| "".to_string(), |dt| dt.to_string()),
+            last_login: None,
+        })
+        .collect();
+
+    HttpResponse::Ok().json(crate::dto::UserListResponse {
+        code: 200,
+        msg: "获取成功".to_string(),
+        users: user_infos,
+        total: total as i64,
+    })
+}
+
+pub async fn create_user(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<crate::dto::CreateUserRequest>,
+) -> impl Responder {
+
+    // Check if username already exists
+    let user_collection = db.collection::<User>("users");
+    let existing_user = user_collection
+        .find_one(doc! { "user_name": &request.user_name }, None)
+        .await;
+
+    if let Ok(Some(_)) = existing_user {
+        return HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "用户名已存在"
+        }));
+    }
+
+    // Check if email already exists
+    let existing_email = user_collection
+        .find_one(doc! { "user_email": &request.user_email }, None)
+        .await;
+
+    if let Ok(Some(_)) = existing_email {
+        return HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "邮箱已存在"
+        }));
+    }
+
+    // Hash password
+    let hashed_password = match bcrypt::hash(&request.password, 12) {
+        Ok(hash) => hash,
+        Err(e) => {
+            eprintln!("Password hashing error: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "服务器错误"
+            }));
+        }
+    };
+
+    // Calculate VIP end time if provided
+    let vip_end_time = if let (Some(vip_level), Some(duration_days)) = (request.vip_level, request.vip_duration_days) {
+        if vip_level > 0 && duration_days > 0 {
+            let duration_ms = (duration_days as i64) * 24 * 60 * 60 * 1000;
+            Some(mongodb::bson::DateTime::from_millis(
+                chrono::Utc::now().timestamp_millis() + duration_ms
+            ))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Create new user
+    let new_user = User {
+        id: Some(mongodb::bson::oid::ObjectId::new()),
+        user_name: request.user_name.clone(),
+        user_pwd: hashed_password,
+        group_id: 1, // Default group ID
+        user_status: 1, // Active status
+        user_nick_name: request.user_nick_name.clone(),
+        user_email: Some(request.user_email.clone()),
+        user_phone: None,
+        user_portrait: None,
+        user_points: 0, // Default points
+        user_end_time: mongodb::bson::DateTime::now(), // Default end time
+        vip_level: Some(request.vip_level.unwrap_or(0)),
+        vip_end_time,
+        created_at: Some(mongodb::bson::DateTime::now()),
+    };
+
+    match user_collection.insert_one(new_user, None).await {
+        Ok(_) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "用户创建成功"
+        })),
+        Err(e) => {
+            eprintln!("Database error when creating user: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "服务器错误"
+            }))
+        }
+    }
+}
+
+pub async fn update_user(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<crate::dto::UpdateUserRequest>,
+) -> impl Responder {
+
+    // Parse user ID
+    let user_id = match mongodb::bson::oid::ObjectId::parse_str(&request.user_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(json!({
+                "success": false,
+                "message": "无效的用户ID"
+            }));
+        }
+    };
+
+    let user_collection = db.collection::<User>("users");
+    
+    // Check if user exists
+    let existing_user = match user_collection.find_one(doc! { "_id": user_id }, None).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            return HttpResponse::NotFound().json(json!({
+                "success": false,
+                "message": "用户不存在"
+            }));
+        }
+        Err(e) => {
+            eprintln!("Database error when finding user: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "服务器错误"
+            }));
+        }
+    };
+
+    // Build update document
+    let mut update_doc = doc! {};
+
+    if let Some(user_name) = &request.user_name {
+        // Check if username already exists (excluding current user)
+        if let Ok(Some(_)) = user_collection
+            .find_one(doc! { "user_name": user_name, "_id": { "$ne": user_id } }, None)
+            .await
+        {
+            return HttpResponse::BadRequest().json(json!({
+                "success": false,
+                "message": "用户名已存在"
+            }));
+        }
+        update_doc.insert("user_name", user_name);
+    }
+
+    if let Some(user_email) = &request.user_email {
+        // Check if email already exists (excluding current user)
+        if let Ok(Some(_)) = user_collection
+            .find_one(doc! { "user_email": user_email, "_id": { "$ne": user_id } }, None)
+            .await
+        {
+            return HttpResponse::BadRequest().json(json!({
+                "success": false,
+                "message": "邮箱已存在"
+            }));
+        }
+        update_doc.insert("user_email", user_email);
+    }
+
+    if let Some(user_nick_name) = &request.user_nick_name {
+        update_doc.insert("user_nick_name", user_nick_name);
+    }
+
+    if let Some(password) = &request.password {
+        if !password.is_empty() {
+            let hashed_password = match bcrypt::hash(password, 12) {
+                Ok(hash) => hash,
+                Err(e) => {
+                    eprintln!("Password hashing error: {}", e);
+                    return HttpResponse::InternalServerError().json(json!({
+                        "success": false,
+                        "message": "服务器错误"
+                    }));
+                }
+            };
+            update_doc.insert("user_password", hashed_password);
+        }
+    }
+
+    if let Some(vip_level) = request.vip_level {
+        update_doc.insert("vip_level", vip_level);
+    }
+
+    // Handle VIP duration
+    if let (Some(vip_level), Some(duration_days)) = (request.vip_level, request.vip_duration_days) {
+        if vip_level > 0 && duration_days > 0 {
+            let duration_ms = (duration_days as i64) * 24 * 60 * 60 * 1000;
+            let current_vip_end = existing_user.vip_end_time
+                .map(|end| end.timestamp_millis())
+                .unwrap_or(0);
+            let current_time = chrono::Utc::now().timestamp_millis();
+            
+            let new_vip_end = if current_vip_end > current_time && existing_user.vip_level.unwrap_or(0) == vip_level {
+                // Same VIP level, extend current duration
+                current_vip_end + duration_ms
+            } else {
+                // Different VIP level or not VIP, reset duration
+                current_time + duration_ms
+            };
+            
+            update_doc.insert("vip_end_time", mongodb::bson::DateTime::from_millis(new_vip_end));
+        } else if vip_level == 0 {
+            // Remove VIP status
+            update_doc.insert("vip_end_time", None::<mongodb::bson::DateTime>);
+        }
+    }
+
+    if update_doc.is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "没有提供更新内容"
+        }));
+    }
+
+    match user_collection
+        .update_one(doc! { "_id": user_id }, doc! { "$set": update_doc }, None)
+        .await
+    {
+        Ok(_) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "用户更新成功"
+        })),
+        Err(e) => {
+            eprintln!("Database error when updating user: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "服务器错误"
+            }))
+        }
+    }
+}
+
+pub async fn delete_users(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<crate::dto::DeleteUserRequest>,
+) -> impl Responder {
+
+    // Convert string IDs to ObjectId
+    let mut object_ids = Vec::new();
+    for user_id_str in &request.user_ids {
+        match mongodb::bson::oid::ObjectId::parse_str(user_id_str) {
+            Ok(id) => object_ids.push(id),
+            Err(_) => {
+                return HttpResponse::BadRequest().json(json!({
+                    "success": false,
+                    "message": format!("无效的用户ID: {}", user_id_str)
+                }));
+            }
+        }
+    }
+
+    if object_ids.is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "success": false,
+            "message": "没有提供有效的用户ID"
+        }));
+    }
+
+    let user_collection = db.collection::<User>("users");
+    
+    match user_collection
+        .delete_many(doc! { "_id": { "$in": object_ids } }, None)
+        .await
+    {
+        Ok(result) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": format!("成功删除 {} 个用户", result.deleted_count),
+            "deleted_count": result.deleted_count
+        })),
+        Err(e) => {
+            eprintln!("Database error when deleting users: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "服务器错误"
+            }))
+        }
+    }
+}
+
+// Get single user by ID
+pub async fn get_user_by_id(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    user_id: web::Path<String>,
+) -> impl Responder {
+
+    // Parse user ID
+    let object_id = match mongodb::bson::oid::ObjectId::parse_str(&**user_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(json!({
+                "success": false,
+                "message": "无效的用户ID格式"
+            }));
+        }
+    };
+
+    let user_collection = db.collection::<User>("users");
+    
+    match user_collection.find_one(
+        mongodb::bson::doc! {
+            "_id": object_id
+        },
+        None,
+    ).await {
+        Ok(Some(user)) => {
+            HttpResponse::Ok().json(json!({
+                "success": true,
+                "user": {
+                    "_id": user.id.map_or_else(|| "".to_string(), |id| id.to_string()),
+                    "user_name": user.user_name,
+                    "user_nick_name": user.user_nick_name,
+                    "user_email": user.user_email.unwrap_or_else(|| "".to_string()),
+                    "vip_level": user.vip_level.unwrap_or(0),
+                    "vip_end_time": user.vip_end_time.map(|dt| dt.to_string()),
+                    "created_at": user.created_at.map_or_else(|| "".to_string(), |dt| dt.to_string()),
+                    "group_id": user.group_id,
+                    "user_status": user.user_status,
+                    "user_points": user.user_points
+                }
+            }))
+        }
+        Ok(None) => {
+            HttpResponse::NotFound().json(json!({
+                "success": false,
+                "message": "用户不存在"
+            }))
+        }
+        Err(e) => {
+            eprintln!("获取用户信息失败: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "success": false,
+                "message": "获取用户信息失败"
+            }))
+        }
+    }
+}
+
+pub async fn search_users(admin: crate::jwt_auth::AdminUser,
+    db: web::Data<Database>,
+    request: web::Json<crate::dto::SearchUserRequest>,
+) -> impl Responder {
+
+    let page = request.page.unwrap_or(1);
+    let limit = request.limit.unwrap_or(20);
+    let skip = (page - 1) * limit;
+
+    let user_collection = db.collection::<User>("users");
+    
+    // Create search query
+    let search_query = doc! {
+        "$or": [
+            { "user_name": { "$regex": &request.query, "$options": "i" } },
+            { "user_email": { "$regex": &request.query, "$options": "i" } },
+            { "user_nick_name": { "$regex": &request.query, "$options": "i" } }
+        ]
+    };
+
+    // Get total count
+    let total = match user_collection.count_documents(search_query.clone(), None).await {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("Database error when counting users: {}", e);
+            return HttpResponse::InternalServerError().json(crate::dto::UserListResponse {
+                code: 500,
+                msg: "服务器错误".to_string(),
+                users: vec![],
+                total: 0,
+            });
+        }
+    };
+
+    // Get users with pagination
+    let find_options = FindOptions::builder()
+        .skip(skip as u64)
+        .limit(limit as i64)
+        .sort(doc! { "created_at": -1 })
+        .build();
+
+    let users: Vec<User> = match user_collection.find(search_query, find_options).await {
+        Ok(cursor) => cursor.try_collect().await.unwrap_or_else(|_| vec![]),
+        Err(e) => {
+            eprintln!("Database error when searching users: {}", e);
+            return HttpResponse::InternalServerError().json(crate::dto::UserListResponse {
+                code: 500,
+                msg: "服务器错误".to_string(),
+                users: vec![],
+                total: 0,
+            });
+        }
+    };
+
+    // Convert to UserAdminInfo format
+    let user_infos: Vec<crate::dto::UserAdminInfo> = users
+        .into_iter()
+        .map(|user| crate::dto::UserAdminInfo {
+            id: user.id.map_or_else(|| "".to_string(), |id| id.to_string()),
+            user_name: user.user_name,
+            user_nick_name: user.user_nick_name,
+            user_email: user.user_email.unwrap_or_else(|| "".to_string()),
+            vip_level: user.vip_level.unwrap_or(0),
+            vip_end_time: user.vip_end_time.map(|end| end.to_string()),
+            created_at: user.created_at.map_or_else(|| "".to_string(), |dt| dt.to_string()),
+            last_login: None,
+        })
+        .collect();
+
+    HttpResponse::Ok().json(crate::dto::UserListResponse {
+        code: 200,
+        msg: "搜索成功".to_string(),
+        users: user_infos,
+        total: total as i64,
+    })
+}
+
+// Admin page wrappers with JWT authentication
