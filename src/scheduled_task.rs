@@ -145,17 +145,29 @@ impl ScheduledTaskManager {
             }
         }
 
-        // 步骤1：生成任务ID并立即设置到数据库
-        println!("🔍 步骤1：设置任务运行状态到数据库...");
+        // 步骤1：获取当前配置并生成任务ID
+        println!("🔍 步骤1：获取当前配置并设置任务状态...");
         let immediate_task_id = ObjectId::new().to_hex();
         let task_id_clone = immediate_task_id.clone();
         let now = DateTime::now();
+        
+        // 获取当前配置以获取间隔时间
+        let interval_hours = if let Some(config) = self.get_config().await? {
+            config.interval_hours
+        } else {
+            12 // 默认12小时
+        };
+        
+        // 重新计算下次运行时间（从当前时间开始）
+        let next_run_millis = now.timestamp_millis() + ((interval_hours as i64) * 3600 * 1000);
+        let next_run = DateTime::from_millis(next_run_millis);
         
         let update = doc! {
             "$set": {
                 "enabled": true,
                 "is_running": true,
                 "current_task_id": task_id_clone,
+                "next_run": next_run,
                 "updated_at": now
             }
         };
@@ -167,6 +179,9 @@ impl ScheduledTaskManager {
         }
         
         println!("🚀 定时采集任务已启动");
+        println!("📅 配置间隔: {} 小时", interval_hours);
+        println!("📅 下次运行时间: {}", next_run);
+        println!("📅 当前时间: {}", now);
 
         // 步骤2：启动定时任务循环（异步执行，不阻塞当前流程）
         println!("🔍 步骤2：启动定时任务循环...");
@@ -264,27 +279,52 @@ impl ScheduledTaskManager {
 
         loop {
             // 检查是否应该停止
-            if let Ok(Some(config)) = self.get_config().await {
-                if !config.enabled || !config.is_running {
+            match self.get_config().await {
+                Ok(Some(config)) => {
+                    if !config.enabled || !config.is_running {
+                        println!("⏹️ 定时任务已停止，退出循环");
+                        break;
+                    }
+
+                    // 检查是否到了执行时间
+                    if let Some(next_run) = config.next_run {
+                        let now = ChronoDateTime::from_timestamp(DateTime::now().timestamp_millis() as i64 / 1000, 0).unwrap();
+                        let next_run_time = ChronoDateTime::from_timestamp(next_run.timestamp_millis() as i64 / 1000, 0).unwrap();
+                        
+                        if now >= next_run_time {
+                            println!("🕐 到达执行时间，开始定时采集任务...");
+                            // 执行采集任务
+                            if let Err(e) = self.execute_scheduled_collection(&config).await {
+                                eprintln!("❌ 执行定时采集任务失败: {}", e);
+                            } else {
+                                println!("✅ 定时采集任务执行完成，等待下次执行...");
+                            }
+                        } else {
+                            // 显示下次执行时间的倒计时
+                            let time_until_next = next_run_time - now;
+                            let hours = time_until_next.num_hours();
+                            let minutes = time_until_next.num_minutes() % 60;
+                            println!("⏳ 定时任务运行中，下次执行还有: {}小时{}分钟", hours, minutes);
+                        }
+                    } else {
+                        println!("⚠️ 未设置下次运行时间");
+                    }
+                }
+                Ok(None) => {
+                    println!("⚠️ 未找到定时任务配置，停止循环");
                     break;
                 }
-
-                // 检查是否到了执行时间
-                if let Some(next_run) = config.next_run {
-                    let now = ChronoDateTime::from_timestamp(DateTime::now().timestamp_millis() as i64 / 1000, 0).unwrap();
-                    let next_run_time = ChronoDateTime::from_timestamp(next_run.timestamp_millis() as i64 / 1000, 0).unwrap();
-                    
-                    if now >= next_run_time {
-                        // 执行采集任务
-                        if let Err(e) = self.execute_scheduled_collection(&config).await {
-                            eprintln!("❌ 执行定时采集任务失败: {}", e);
-                        }
-                    }
+                Err(e) => {
+                    eprintln!("❌ 获取定时任务配置失败: {}", e);
+                    // 获取配置失败时等待一段时间再重试
+                    tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
                 }
             }
 
             interval_timer.tick().await;
         }
+        
+        println!("🛑 定时任务循环已停止");
     }
 
     /// 执行立即采集任务（跳过运行状态检查）
